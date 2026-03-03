@@ -1,92 +1,74 @@
 // ============================================================
 // /lib/auth.ts
-// NextAuth Configuration — Credentials + Google OAuth
+// Supabase Auth — Server-side session helper
+// Replaces NextAuth's getServerSession for all API routes
 // ============================================================
-import NextAuth, { NextAuthOptions } from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
-import bcrypt from "bcryptjs";
-import type { Role } from "@prisma/client";
+import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/prisma";
+import type { Role } from "@prisma/client";
 
-export const authOptions: NextAuthOptions = {
-  // @ts-expect-error - PrismaAdapter type compatibility
-  adapter: PrismaAdapter(db),
+export interface AuthSession {
+  user: {
+    id: string;
+    email: string;
+    name?: string | null;
+    image?: string | null;
+    role: Role;
+  };
+}
 
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
+/**
+ * Get the current authenticated session from Supabase Auth.
+ * Returns null if the user is not authenticated.
+ * Role is read from user_metadata (set during registration).
+ */
+export async function getSession(): Promise<AuthSession | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  providers: [
-    // ---- Email / Password ----
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+  if (!user) return null;
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email },
-        });
+  // Role is stored in user_metadata for quick access
+  const role = (user.user_metadata?.role as Role) ?? "CANDIDATE";
 
-        if (!user || !user.hashedPassword) return null;
-
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.hashedPassword
-        );
-
-        if (!isValid) return null;
-
-        return {
-          id: user.id,
-          email: user.email!,
-          name: user.name,
-          image: user.image,
-          role: user.role,
-        };
-      },
-    }),
-
-    // ---- Google OAuth ----
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
-  ],
-
-  callbacks: {
-    // Persist role in the JWT token
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = ((user as unknown as { role?: string }).role ?? "CANDIDATE") as Role;
-      }
-      return token;
+  return {
+    user: {
+      id: user.id,
+      email: user.email!,
+      name: (user.user_metadata?.name as string | null) ?? null,
+      image: (user.user_metadata?.avatar_url as string | null) ?? null,
+      role,
     },
+  };
+}
 
-    // Expose role on the client-side session
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as Role;
-      }
-      return session;
+/**
+ * Get session with a full Prisma user lookup (for cases where you need
+ * the latest DB state, not just JWT metadata).
+ */
+export async function getSessionWithDbUser(): Promise<AuthSession | null> {
+  const supabase = await createClient();
+  const {
+    data: { user: supabaseUser },
+  } = await supabase.auth.getUser();
+
+  if (!supabaseUser) return null;
+
+  const dbUser = await db.user.findUnique({
+    where: { id: supabaseUser.id },
+  });
+
+  if (!dbUser) return null;
+
+  return {
+    user: {
+      id: dbUser.id,
+      email: dbUser.email!,
+      name: dbUser.name,
+      image: dbUser.image,
+      role: dbUser.role,
     },
-  },
-
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-
-  secret: process.env.NEXTAUTH_SECRET,
-};
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+  };
+}

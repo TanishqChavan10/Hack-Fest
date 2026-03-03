@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/components/shared/AuthProvider";
 import {
   BrainCircuit,
   Briefcase,
@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const { data: session, status } = useSession();
-  const isRecruiter = session?.user?.role === "RECRUITER";
-  const isCandidate = session?.user?.role === "CANDIDATE";
+  const { user, role, loading, signOut } = useAuth();
+  const isRecruiter = role === "RECRUITER";
+  const isCandidate = role === "CANDIDATE";
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -65,10 +65,10 @@ export function Navbar() {
 
         {/* Auth Actions */}
         <div className="ml-auto flex items-center gap-3">
-          {status === "loading" && (
+          {loading && (
             <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
           )}
-          {status === "unauthenticated" && (
+          {!loading && !user && (
             <>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/login">Sign In</Link>
@@ -78,16 +78,16 @@ export function Navbar() {
               </Button>
             </>
           )}
-          {status === "authenticated" && (
+          {!loading && user && (
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground hidden sm:block">
-                {session.user.name ?? session.user.email}
+                {user.user_metadata?.name ?? user.email}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
                 className="gap-1.5"
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={() => signOut()}
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Sign out</span>

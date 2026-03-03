@@ -7,9 +7,6 @@ out/
 dist/
 
 # Environment variables
-.env
-.env.local
-.env.*.local
 
 # Prisma generated client
 prisma/generated/

@@ -1,12 +1,14 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - Prisma client is generated at build time
 import { PrismaClient } from "@prisma/client";
-import * as bcrypt from "bcryptjs";
-
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");
+
+  // NOTE: With Supabase Auth, real users are created via supabase.auth.signUp().
+  // These seed records are for development/testing only; they won't have
+  // matching rows in Supabase's auth.users table.
 
   // -------------------------------------------------------
   // Seed recruiter
@@ -18,7 +20,6 @@ async function main() {
       email: "recruiter@demo.com",
       name: "Demo Recruiter",
       role: "RECRUITER",
-      hashedPassword: await bcrypt.hash("Password123!", 12),
       recruiterProfile: {
         create: {
           companyName: "TechCorp Inc.",
@@ -41,7 +42,6 @@ async function main() {
       email: "candidate@demo.com",
       name: "Jane Developer",
       role: "CANDIDATE",
-      hashedPassword: await bcrypt.hash("Password123!", 12),
       candidateProfile: {
         create: {
           headline: "Full-Stack Developer | React & Node.js",

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/shared/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -18,7 +18,7 @@ interface Job {
 }
 
 export default function RecruiterDashboardPage() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -56,7 +56,7 @@ export default function RecruiterDashboardPage() {
         <div>
           <h1 className="text-3xl font-bold">Recruiter Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Welcome back, {session?.user?.name ?? "Recruiter"}
+            Welcome back, {user?.user_metadata?.name ?? "Recruiter"}
           </p>
         </div>
         <Button asChild className="gap-2">

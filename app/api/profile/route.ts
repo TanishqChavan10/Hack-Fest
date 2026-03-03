@@ -1,14 +1,13 @@
 // GET /api/profile - Get current user's candidate profile
 // PATCH /api/profile - Update candidate profile
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { z } from "zod";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -52,7 +51,7 @@ const ProfileUpdateSchema = z.object({
 
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || session.user.role !== "CANDIDATE") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

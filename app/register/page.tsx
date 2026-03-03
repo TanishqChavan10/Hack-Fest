@@ -2,7 +2,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,6 +58,7 @@ function RegisterContent() {
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   const {
     register,
@@ -77,10 +78,43 @@ function RegisterContent() {
     setServerError(null);
 
     try {
+      // Step 1: Create Supabase Auth user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp(
+        {
+          email: data.email,
+          password: data.password,
+          options: {
+            data: {
+              name: data.name,
+              role: data.role,
+            },
+          },
+        },
+      );
+
+      if (signUpError) {
+        setServerError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!authData.user) {
+        setServerError("Registration failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Create Prisma user + profile via API
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          supabaseUserId: authData.user.id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          companyName: data.companyName,
+        }),
       });
 
       const json = await res.json();
@@ -91,13 +125,6 @@ function RegisterContent() {
         return;
       }
 
-      // Auto sign-in after registration
-      await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      });
-
       router.push(
         role === "RECRUITER" ? "/recruiter/dashboard" : "/candidate/profile",
       );
@@ -106,6 +133,18 @@ function RegisterContent() {
       setServerError("Network error. Please try again.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback`,
+      },
+    });
+    if (error) {
+      setServerError("Failed to initiate Google sign-in.");
     }
   }
 
@@ -233,7 +272,7 @@ function RegisterContent() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => signIn("google")}
+              onClick={handleGoogleSignIn}
             >
               Continue with Google
             </Button>

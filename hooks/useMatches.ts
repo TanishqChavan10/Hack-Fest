@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/shared/AuthProvider";
 import type { RankedCandidateResult } from "@/types";
 
 interface UseMatchesOptions {
@@ -19,14 +19,14 @@ interface UseMatchesReturn {
 }
 
 export function useMatches({ jobId, enabled = true }: UseMatchesOptions): UseMatchesReturn {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [matches, setMatches] = useState<RankedCandidateResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shortlisting, setShortlisting] = useState<string | null>(null);
 
   const fetchMatches = useCallback(async () => {
-    if (!jobId || !session?.user || !enabled) return;
+    if (!jobId || !user || !enabled) return;
     setLoading(true);
     setError(null);
     try {
@@ -42,7 +42,7 @@ export function useMatches({ jobId, enabled = true }: UseMatchesOptions): UseMat
     } finally {
       setLoading(false);
     }
-  }, [jobId, session, enabled]);
+  }, [jobId, user, enabled]);
 
   useEffect(() => {
     fetchMatches();

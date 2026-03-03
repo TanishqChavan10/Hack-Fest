@@ -5,15 +5,14 @@
 // Remove after running `npm run db:generate`.
 // @ts-nocheck
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { rankCandidates } from "@/lib/matching";
 import type { CategoryWeights, JobRequirementData } from "@/types";
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || session.user.role !== "RECRUITER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,16 +1,15 @@
 // POST /api/auth/register
-// Creates a new user with CANDIDATE or RECRUITER role.
+// Creates the Prisma User + profile after Supabase Auth signup.
+// Called from the client after supabase.auth.signUp() succeeds.
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/prisma";
 
 const RegisterSchema = z.object({
+  supabaseUserId: z.string().min(1, "Supabase user ID is required"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(["CANDIDATE", "RECRUITER"]),
-  // Recruiter-specific
   companyName: z.string().optional(),
 });
 
@@ -26,27 +25,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, email, password, role, companyName } = parsed.data;
+    const { supabaseUserId, name, email, role, companyName } = parsed.data;
 
-    // Check if user already exists
-    const existing = await db.user.findUnique({ where: { email } });
+    // Check if user already exists in Prisma
+    const existing = await db.user.findUnique({ where: { id: supabaseUserId } });
     if (existing) {
+      return NextResponse.json(
+        { message: "User already exists.", userId: existing.id },
+        { status: 200 }
+      );
+    }
+
+    // Also check by email
+    const existingByEmail = await db.user.findUnique({ where: { email } });
+    if (existingByEmail) {
       return NextResponse.json(
         { error: "An account with this email already exists." },
         { status: 409 }
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-
     // Create user and associated profile in a transaction
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const user = await db.$transaction(async (tx: any) => {
       const newUser = await tx.user.create({
         data: {
+          id: supabaseUserId, // Use Supabase Auth user ID
           name,
           email,
-          hashedPassword,
           role,
         },
       });
