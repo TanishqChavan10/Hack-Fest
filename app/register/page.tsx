@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/Card";
 import { BrainCircuit, Briefcase, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const RegisterSchema = z
   .object({
@@ -274,6 +275,7 @@ function RegisterContent() {
               className="w-full"
               onClick={handleGoogleSignIn}
             >
+              <GoogleIcon />
               Continue with Google
             </Button>
           </form>

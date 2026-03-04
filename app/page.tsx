@@ -1,16 +1,36 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { BrainCircuit, Search, TrendingUp, Users } from "lucide-react";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+
+  if (session?.user) {
+    const role = session.user.role;
+    // Redirect based on role
+    switch (role) {
+      case "ADMIN":
+        redirect("/admin");
+      case "RECRUITER":
+        redirect("/recruiter/dashboard");
+      case "CANDIDATE":
+        redirect("/candidate/profile");
+      default:
+        redirect("/"); // Added a default redirect for safety
+    }
+  }
+
   return (
     <div className="flex flex-col">
       {/* ── HERO ── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-background py-24 px-4">
         <div className="container mx-auto max-w-4xl text-center">
           <Badge variant="secondary" className="mb-4 text-sm font-medium">
-            🚀 Phase 1 — Core Infrastructure Live
+            LinkedIn meets Tinder
           </Badge>
           <h1 className="text-5xl font-extrabold tracking-tight sm:text-6xl">
             Discover Talent

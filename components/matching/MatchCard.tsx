@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { MatchScoreBadge, ScoreBar } from "./ScoreBar";
+import { XAIExplanation } from "./XAITooltip";
 import { getScoreColor, timeAgo, cn } from "@/lib/utils";
 import {
   Star,
@@ -36,6 +37,12 @@ export interface MatchCardProps {
     };
   };
   jobId: string;
+  jobRequirements?: Array<{
+    skillName: string;
+    minLevel: number;
+    weight: number;
+    isMandatory: boolean;
+  }>;
   onShortlistToggle?: (candidateId: string, isShortlisted: boolean) => void;
 }
 
@@ -47,6 +54,7 @@ export function MatchCard({
   isShortlisted,
   candidate,
   jobId,
+  jobRequirements,
   onShortlistToggle,
 }: MatchCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -170,10 +178,21 @@ export function MatchCard({
         </button>
 
         {expanded && (
-          <div className="mt-3 space-y-2 border-t pt-3">
-            <ScoreBar score={breakdown.technical} label="Technical Skills" />
-            <ScoreBar score={breakdown.softSkills} label="Soft Skills" />
-            <ScoreBar score={breakdown.experience} label="Experience" />
+          <div className="mt-3 space-y-3 border-t pt-3">
+            <div className="space-y-2">
+              <ScoreBar score={breakdown.technical} label="Technical Skills" />
+              <ScoreBar score={breakdown.softSkills} label="Soft Skills" />
+              <ScoreBar score={breakdown.experience} label="Experience" />
+            </div>
+            <div className="border-t pt-3">
+              <XAIExplanation
+                breakdown={breakdown}
+                isMandatoryPass={isMandatoryPass}
+                score={score}
+                candidateSkills={candidate.hardSkills ?? {}}
+                jobRequirements={jobRequirements}
+              />
+            </div>
           </div>
         )}
       </CardContent>
