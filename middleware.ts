@@ -14,6 +14,11 @@ export default withAuth(
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
+    // ---- ADMIN-only routes ----
+    if (pathname.startsWith("/admin") && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    }
+
     // ---- CANDIDATE-only routes ----
     if (pathname.startsWith("/candidate") && token?.role !== "CANDIDATE") {
       return NextResponse.redirect(new URL("/unauthorized", req.url));

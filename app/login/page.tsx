@@ -1,6 +1,6 @@
 "use client";
 import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/Card";
 import { BrainCircuit } from "lucide-react";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const LoginSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -42,7 +43,7 @@ export default function LoginPage() {
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = searchParams.get("callbackUrl");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -62,14 +63,37 @@ function LoginContent() {
       password: data.password,
       redirect: false,
     });
-    setLoading(false);
 
     if (result?.error) {
       setError("Invalid email or password.");
-    } else {
-      router.push(callbackUrl);
-      router.refresh();
+      setLoading(false);
+      return;
     }
+
+    // Success: Get session and redirect based on role
+    const session = await getSession();
+    const role = session?.user?.role;
+
+    if (callbackUrl) {
+      router.push(callbackUrl);
+    } else {
+      switch (role) {
+        case "ADMIN":
+          router.push("/admin");
+          break;
+        case "RECRUITER":
+          router.push("/recruiter/dashboard");
+          break;
+        case "CANDIDATE":
+          router.push("/candidate/profile");
+          break;
+        default:
+          router.push("/");
+      }
+    }
+
+    router.refresh();
+    setLoading(false);
   }
 
   return (
@@ -137,9 +161,10 @@ function LoginContent() {
             <Button
               type="button"
               variant="outline"
-              className="w-full"
-              onClick={() => signIn("google", { callbackUrl })}
+              className="w-full gap-2"
+              onClick={() => signIn("google")}
             >
+              <GoogleIcon />
               Continue with Google
             </Button>
           </form>

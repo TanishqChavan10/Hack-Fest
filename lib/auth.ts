@@ -78,6 +78,15 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+
+    // Centralized redirection logic
+    async redirect({ url, baseUrl }) {
+      // If the url is the sign-in page or the root, redirect based on session
+      // Note: role is not directly available here easily without fetching session
+      // but we can allow the default behavior if it's an internal callback.
+      if (url.startsWith(baseUrl)) return url;
+      return baseUrl;
+    },
   },
 
   pages: {

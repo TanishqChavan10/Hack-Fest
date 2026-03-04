@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/Card";
 import { BrainCircuit, Briefcase, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const RegisterSchema = z
   .object({
@@ -92,15 +93,29 @@ function RegisterContent() {
       }
 
       // Auto sign-in after registration
-      await signIn("credentials", {
+      const signResult = await signIn("credentials", {
         email: data.email,
         password: data.password,
         redirect: false,
       });
 
-      router.push(
-        role === "RECRUITER" ? "/recruiter/dashboard" : "/candidate/profile",
-      );
+      if (signResult?.error) {
+        router.push("/login?error=auto-signin-failed");
+        return;
+      }
+
+      // Redirect based on role
+      switch (data.role) {
+        case "RECRUITER":
+          router.push("/recruiter/search");
+          break;
+        case "CANDIDATE":
+          router.push("/candidate/profile");
+          break;
+        default:
+          router.push("/");
+      }
+
       router.refresh();
     } catch {
       setServerError("Network error. Please try again.");
@@ -232,9 +247,10 @@ function RegisterContent() {
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full gap-2"
               onClick={() => signIn("google")}
             >
+              <GoogleIcon />
               Continue with Google
             </Button>
           </form>
