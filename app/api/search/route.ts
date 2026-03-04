@@ -1,15 +1,14 @@
 // GET /api/search?q=...&mode=keyword|semantic
 // Hybrid search: keyword (ILIKE) or semantic (pgvector + OpenAI embeddings).
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { generateEmbedding } from "@/services/gemini";
 import { semanticSearchCandidates } from "@/lib/supabase";
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || session.user.role !== "RECRUITER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,8 +1,7 @@
 // PATCH /api/match/shortlist
 // Toggle shortlist status for a candidate on a job.
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -14,7 +13,7 @@ const ShortlistSchema = z.object({
 
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || session.user.role !== "RECRUITER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

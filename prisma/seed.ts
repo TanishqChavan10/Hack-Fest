@@ -1,20 +1,20 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - Prisma client is generated at build time
 import { PrismaClient } from "@prisma/client";
-import * as bcrypt from "bcryptjs";
-
 const prisma = new PrismaClient();
 
 async function main() {
   const PASS_HASH = await bcrypt.hash("Password123!", 12);
 
-  console.log("🌱 Seeding database...\n");
+  // NOTE: With Supabase Auth, real users are created via supabase.auth.signUp().
+  // These seed records are for development/testing only; they won't have
+  // matching rows in Supabase's auth.users table.
 
-  // ===========================================================
-  // 1. ADMIN USER
-  // ===========================================================
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@talentmatch.com" },
+  // -------------------------------------------------------
+  // Seed recruiter
+  // -------------------------------------------------------
+  const recruiterUser = await prisma.user.upsert({
+    where: { email: "recruiter@demo.com" },
     update: {},
     create: {
       email: "admin@talentmatch.com",
@@ -34,7 +34,6 @@ async function main() {
       email: "recruiter@techcorp.com",
       name: "Priya Sharma",
       role: "RECRUITER",
-      hashedPassword: PASS_HASH,
       recruiterProfile: {
         create: {
           companyName: "TechCorp India",
@@ -55,11 +54,10 @@ async function main() {
     where: { email: "recruiter@startuphub.com" },
     update: {},
     create: {
-      email: "recruiter@startuphub.com",
-      name: "Arjun Patel",
-      role: "RECRUITER",
-      hashedPassword: PASS_HASH,
-      recruiterProfile: {
+      email: "candidate@demo.com",
+      name: "Jane Developer",
+      role: "CANDIDATE",
+      candidateProfile: {
         create: {
           companyName: "StartupHub",
           industry: "FinTech",

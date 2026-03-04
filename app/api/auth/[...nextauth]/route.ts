@@ -1,5 +1,13 @@
-import { authOptions } from "@/lib/auth";
-import NextAuth from "next-auth";
+// ============================================================
+// This NextAuth route is deprecated — Supabase Auth is now used.
+// Kept as a no-op to prevent 404 for any lingering NextAuth requests.
+// ============================================================
+import { NextResponse } from "next/server";
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+export async function GET() {
+  return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL ?? "http://localhost:3000"));
+}
+
+export async function POST() {
+  return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL ?? "http://localhost:3000"));
+}

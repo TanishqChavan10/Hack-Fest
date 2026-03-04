@@ -17,21 +17,12 @@ export interface AuthUser {
   role: Role;
 }
 
-// Extend NextAuth session types
-declare module "next-auth" {
-  interface Session {
-    user: AuthUser;
-  }
-  interface User {
-    role: Role;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: Role;
-  }
+// Supabase user_metadata typing helper
+export interface SupabaseUserMetadata {
+  name?: string;
+  role?: Role;
+  avatar_url?: string;
+  full_name?: string;
 }
 
 // -------------------------------------------------------

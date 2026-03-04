@@ -2,8 +2,7 @@
 // PATCH /api/jobs/[id] - Update job (recruiter only)
 // DELETE /api/jobs/[id] - Delete / archive job (recruiter only)
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 
 interface RouteParams {
@@ -27,7 +26,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     // Only return published jobs to public; draft visible to recruiter
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (job.status !== "PUBLISHED") {
       if (!session || session.user.id !== job.recruiterId) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -43,7 +42,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || session.user.role !== "RECRUITER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -69,7 +68,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || session.user.role !== "RECRUITER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

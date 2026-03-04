@@ -1,8 +1,7 @@
 // GET /api/jobs - List published jobs (for candidates)
 // POST /api/jobs - Create a new job (for recruiters)
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -86,7 +85,7 @@ const JobCreateSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || session.user.role !== "RECRUITER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/shared/AuthProvider";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -57,7 +57,7 @@ interface UserMatch {
 export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user, role } = useAuth();
   const [job, setJob] = useState<JobDetail | null>(null);
   const [match, setMatch] = useState<UserMatch | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,7 +208,7 @@ export default function JobDetailPage() {
         )}
 
         {/* Apply button */}
-        {session?.user.role === "CANDIDATE" && (
+        {role === "CANDIDATE" && (
           <div className="flex gap-3">
             {applied ? (
               <div className="flex items-center gap-2 text-success font-medium">

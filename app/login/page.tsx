@@ -1,6 +1,6 @@
 "use client";
 import { useState, Suspense } from "react";
-import { signIn, getSession } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -46,6 +46,7 @@ function LoginContent() {
   const callbackUrl = searchParams.get("callbackUrl");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   const {
     register,
@@ -58,13 +59,15 @@ function LoginContent() {
   async function onSubmit(data: LoginForm) {
     setLoading(true);
     setError(null);
-    const result = await signIn("credentials", {
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
-      redirect: false,
     });
 
-    if (result?.error) {
+    setLoading(false);
+
+    if (signInError) {
       setError("Invalid email or password.");
       setLoading(false);
       return;
@@ -94,6 +97,18 @@ function LoginContent() {
 
     router.refresh();
     setLoading(false);
+  }
+
+  async function handleGoogleSignIn() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(callbackUrl)}`,
+      },
+    });
+    if (error) {
+      setError("Failed to initiate Google sign-in.");
+    }
   }
 
   return (
@@ -161,8 +176,8 @@ function LoginContent() {
             <Button
               type="button"
               variant="outline"
-              className="w-full gap-2"
-              onClick={() => signIn("google")}
+              className="w-full"
+              onClick={handleGoogleSignIn}
             >
               <GoogleIcon />
               Continue with Google
