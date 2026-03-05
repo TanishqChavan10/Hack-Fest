@@ -1,6 +1,6 @@
 "use client";
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useForm } from "react-hook-form";
@@ -17,8 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import { BrainCircuit, Briefcase, User, Github } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { BrainCircuit, Github } from "lucide-react";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const RegisterSchema = z
@@ -27,8 +26,6 @@ const RegisterSchema = z
     email: z.string().email("Enter a valid email"),
     password: z.string().min(8, "Minimum 8 characters"),
     confirmPassword: z.string(),
-    role: z.enum(["CANDIDATE", "RECRUITER"]),
-    companyName: z.string().optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords do not match",
@@ -53,9 +50,6 @@ export default function RegisterPage() {
 
 function RegisterContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const defaultRole =
-    searchParams.get("role") === "recruiter" ? "RECRUITER" : "CANDIDATE";
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,34 +58,23 @@ function RegisterContent() {
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(RegisterSchema),
-    defaultValues: { role: defaultRole },
   });
-
-  const role = watch("role");
 
   async function onSubmit(data: RegisterForm) {
     setLoading(true);
     setServerError(null);
 
     try {
-      // Step 1: Create Supabase Auth user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp(
-        {
-          email: data.email,
-          password: data.password,
-          options: {
-            data: {
-              name: data.name,
-              role: data.role,
-            },
-          },
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: { name: data.name },
         },
-      );
+      });
 
       if (signUpError) {
         setServerError(signUpError.message);
@@ -99,36 +82,8 @@ function RegisterContent() {
         return;
       }
 
-      if (!authData.user) {
-        setServerError("Registration failed. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      // Step 2: Create Prisma user + profile via API
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          supabaseUserId: authData.user.id,
-          name: data.name,
-          email: data.email,
-          role: data.role,
-          companyName: data.companyName,
-        }),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        setServerError(json.error ?? "Registration failed. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      router.push(
-        role === "RECRUITER" ? "/recruiter/dashboard" : "/candidate/profile",
-      );
+      // No role yet — redirect to onboarding to choose role
+      router.push("/onboarding");
       router.refresh();
     } catch {
       setServerError("Network error. Please try again.");
@@ -175,24 +130,6 @@ function RegisterContent() {
         </CardHeader>
 
         <CardContent>
-          {/* Role Selector */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <RoleButton
-              active={role === "CANDIDATE"}
-              onClick={() => setValue("role", "CANDIDATE")}
-              icon={<User className="h-5 w-5" />}
-              label="I'm a Candidate"
-              sub="Looking for jobs"
-            />
-            <RoleButton
-              active={role === "RECRUITER"}
-              onClick={() => setValue("role", "RECRUITER")}
-              icon={<Briefcase className="h-5 w-5" />}
-              label="I'm a Recruiter"
-              sub="Hiring talent"
-            />
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {serverError && (
               <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
@@ -225,17 +162,6 @@ function RegisterContent() {
               )}
             </div>
 
-            {role === "RECRUITER" && (
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input
-                  id="companyName"
-                  placeholder="Acme Inc."
-                  {...register("companyName")}
-                />
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -265,8 +191,6 @@ function RegisterContent() {
                 </p>
               )}
             </div>
-
-            <input type="hidden" {...register("role")} />
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account..." : "Create Account"}
@@ -314,36 +238,5 @@ function RegisterContent() {
         </CardFooter>
       </Card>
     </div>
-  );
-}
-
-function RoleButton({
-  active,
-  onClick,
-  icon,
-  label,
-  sub,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  sub: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-all",
-        active
-          ? "border-primary bg-primary/10 text-primary font-semibold"
-          : "border-border hover:border-primary/50 hover:bg-muted",
-      )}
-    >
-      {icon}
-      <span className="font-medium">{label}</span>
-      <span className="text-xs text-muted-foreground">{sub}</span>
-    </button>
   );
 }

@@ -74,8 +74,17 @@ function LoginContent() {
     }
 
     // Success: Get user role and redirect
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const role = user?.user_metadata?.role;
+
+    // If user hasn't completed onboarding (no role), send them there
+    if (!role) {
+      router.push("/onboarding");
+      router.refresh();
+      return;
+    }
 
     if (callbackUrl) {
       router.push(callbackUrl);
@@ -91,7 +100,7 @@ function LoginContent() {
           router.push("/candidate/profile");
           break;
         default:
-          router.push("/");
+          router.push("/onboarding");
       }
     }
 

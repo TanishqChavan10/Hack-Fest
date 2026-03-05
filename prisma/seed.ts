@@ -249,7 +249,7 @@ async function main() {
       },
       include: { candidateProfile: true },
     });
-    if (user.candidateProfile) createdCandidateIds.push(user.candidateProfile.id);
+    if (user.candidateProfile) createdCandidateIds.push(user.candidateProfile.userId);
   }
 
   // ===========================================================
@@ -258,7 +258,6 @@ async function main() {
   const jobs = [
     {
       recruiterId: recruiter1.id,
-      recruiterProfileId: recruiter1.recruiterProfile?.id,
       title: "Senior Full-Stack Engineer",
       description:
         "Build and scale our cloud-native platform using React, Node.js, and PostgreSQL. You'll own critical product features end-to-end and mentor junior developers.",
@@ -280,7 +279,6 @@ async function main() {
     },
     {
       recruiterId: recruiter2.id,
-      recruiterProfileId: recruiter2.recruiterProfile?.id,
       title: "Frontend Developer (React Native)",
       description:
         "Join our mobile team to build the next-generation fintech app used by millions. Experience with animations and payment integrations preferred.",
@@ -302,7 +300,6 @@ async function main() {
     },
     {
       recruiterId: recruiter3.id,
-      recruiterProfileId: recruiter3.recruiterProfile?.id,
       title: "Machine Learning Engineer",
       description:
         "Research and deploy NLP models for clinical text analysis. Strong foundation in PyTorch and transformers required.",
@@ -324,7 +321,6 @@ async function main() {
     },
     {
       recruiterId: recruiter1.id,
-      recruiterProfileId: recruiter1.recruiterProfile?.id,
       title: "DevOps / SRE Engineer",
       description:
         "Manage our Kubernetes clusters, CI/CD pipelines, and cloud infrastructure on AWS. On-call rotation required.",
@@ -346,7 +342,6 @@ async function main() {
     },
     {
       recruiterId: recruiter2.id,
-      recruiterProfileId: recruiter2.recruiterProfile?.id,
       title: "Junior Web Developer (Internship)",
       description:
         "6-month internship for fresh graduates. Learn modern web development with React, Next.js, and build real features shipped to production.",

@@ -56,6 +56,11 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const role = user.user_metadata?.role as string | undefined;
 
+    // Authenticated user without a role hasn't completed onboarding
+    if (!role && !isPublicRoute && !pathname.startsWith("/api/")) {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+
     // RECRUITER-only routes
     if (pathname.startsWith("/recruiter") && role !== "RECRUITER") {
       return NextResponse.redirect(new URL("/unauthorized", request.url));

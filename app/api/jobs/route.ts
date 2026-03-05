@@ -101,16 +101,10 @@ export async function POST(request: Request) {
 
     const { requirements, ...jobData } = parsed.data;
 
-    // Get recruiter profile
-    const recruiterProfile = await db.recruiterProfile.findUnique({
-      where: { userId: session.user.id },
-    });
-
     const job = await db.job.create({
       data: {
         ...jobData,
         recruiterId: session.user.id,
-        recruiterProfileId: recruiterProfile?.id,
         requirements: {
           create: requirements.map((r) => ({
             ...r,

@@ -12,7 +12,7 @@ datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
-  extensions = [pgvector(map: "vector", schema: "extensions")]
+  extensions = [uuid_ossp(map: "uuid-ossp", schema: "extensions"), vector(schema: "extensions")]
 }
 
 // ============================================================
@@ -40,45 +40,40 @@ enum ApplicationStatus {
 }
 
 enum ExperienceLevel {
-  ENTRY      // 0-2 years
-  MID        // 2-5 years
-  SENIOR     // 5-10 years
-  LEAD       // 10+ years
+  ENTRY
+  MID
+  SENIOR
+  LEAD
   EXECUTIVE
 }
 
 // ============================================================
 // USER MODEL (Supabase Auth — user.id matches auth.users.id)
-// Auth sessions, tokens, and passwords are managed by Supabase;
-// only application-level user data lives here.
 // ============================================================
 
 model User {
-  id            String    @id @default(uuid())   // Matches Supabase Auth UUID
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(CANDIDATE)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String            @id @default(uuid())
+  name             String?
+  email            String?           @unique
+  emailVerified    DateTime?
+  image            String?
+  role             Role              @default(CANDIDATE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  // Relations
   candidateProfile CandidateProfile?
   recruiterProfile RecruiterProfile?
-  jobsPosted       Job[]             @relation("RecruiterJobs")
-  applications     Application[]
 }
 
 // ============================================================
-// CANDIDATE PROFILE (Phase 1: Manual + Phase 2: GitHub Auto-sync)
+// CANDIDATE PROFILE
+// Primary key is userId (1:1 with User)
 // ============================================================
 
 model CandidateProfile {
-  id              String          @id @default(cuid())
-  userId          String          @unique
-  headline        String?         // e.g. "Full Stack Engineer | React | Node.js"
-  bio             String?         @db.Text
+  userId          String          @id
+  headline        String?
+  bio             String?
   location        String?
   phoneNumber     String?
   linkedinUrl     String?
@@ -88,27 +83,19 @@ model CandidateProfile {
   experienceLevel ExperienceLevel @default(ENTRY)
   yearsOfExp      Int             @default(0)
   isOpenToWork    Boolean         @default(true)
-  
-  // ---- CORE MATCHING DATA ----
-  // JsonB: {"Python": 9, "React": 7, "Docker": 4}
-  // Levels are 1-10 (10 = expert). Stored as JSON for schema flexibility.
-  hardSkills Json @default("{}")
-  softSkills Json @default("{}")
 
-  // ---- GITHUB ENRICHMENT (Phase 2) ----
-  githubStats  Json?    // {stars: 120, topLanguages: {}, recentActivity: "2024-01"}
-  lastGithubSync DateTime?
+  hardSkills      Json            @default("{}")
+  softSkills      Json            @default("{}")
 
-  // ---- VECTOR EMBEDDING (Phase 2: pgvector Semantic Search) ----
-  // Stored as Unsupported type; raw SQL used for insert/query via Supabase client
-  // embedding Unsupported("vector(1536)")?
+  githubStats     Json?
+  lastGithubSync  DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  applications Application[]
-  matches      Match[]
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications    Application[]
+  matches         Match[]
 
   @@index([isOpenToWork])
   @@index([experienceLevel])
@@ -116,25 +103,25 @@ model CandidateProfile {
 
 // ============================================================
 // RECRUITER / COMPANY PROFILE
+// Primary key is userId (1:1 with User)
 // ============================================================
 
 model RecruiterProfile {
-  id          String  @id @default(cuid())
-  userId      String  @unique
+  userId      String   @id
   companyName String
-  companySize String? // "1-10", "11-50", "51-200", "201-500", "500+"
+  companySize String?
   industry    String?
   website     String?
   logoUrl     String?
-  description String? @db.Text
+  description String?
   location    String?
-  isVerified  Boolean @default(false)
+  isVerified  Boolean  @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobs Job[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobsPosted  Job[]    @relation("RecruiterJobs")
 }
 
 // ============================================================
@@ -142,32 +129,26 @@ model RecruiterProfile {
 // ============================================================
 
 model Job {
-  id              String          @id @default(cuid())
+  id              String           @id @default(cuid())
   recruiterId     String
-  recruiterProfileId String?
   title           String
-  description     String          @db.Text
+  description     String
   location        String?
-  isRemote        Boolean         @default(false)
+  isRemote        Boolean          @default(false)
   salaryMin       Int?
   salaryMax       Int?
-  currency        String          @default("USD")
-  experienceLevel ExperienceLevel @default(MID)
-  status          JobStatus       @default(DRAFT)
+  currency        String           @default("USD")
+  experienceLevel ExperienceLevel  @default(MID)
+  status          JobStatus        @default(DRAFT)
+  categoryWeights Json             @default("{\"experience\": 0.2, \"softSkills\": 0.2, \"technicalSkills\": 0.6}")
 
-  // ---- MATCHING WEIGHTS ----
-  // Weights for the Weighted Scoring Algorithm:
-  // {"technicalSkills": 0.6, "softSkills": 0.2, "experience": 0.2}
-  categoryWeights Json @default("{\"technicalSkills\":0.6,\"softSkills\":0.2,\"experience\":0.2}")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  recruiter        User              @relation("RecruiterJobs", fields: [recruiterId], references: [id])
-  recruiterProfile RecruiterProfile? @relation(fields: [recruiterProfileId], references: [id])
-  requirements     JobRequirement[]
-  applications     Application[]
-  matches          Match[]
+  recruiterProfile RecruiterProfile @relation("RecruiterJobs", fields: [recruiterId], references: [userId])
+  requirements    JobRequirement[]
+  applications    Application[]
+  matches         Match[]
 
   @@index([status])
   @@index([recruiterId])
@@ -175,66 +156,62 @@ model Job {
 }
 
 // ============================================================
-// JOB REQUIREMENTS (Individual skill rows for a job)
+// JOB REQUIREMENTS
 // ============================================================
 
 model JobRequirement {
   id          String  @id @default(cuid())
   jobId       String
-  skillName   String  // normalized lowercase: "react", "python"
-  minLevel    Int     // 1-10: minimum proficiency required
-  weight      Float   // 0.0 - 1.0: importance within technical skills
-  isMandatory Boolean @default(false) // Hard disqualifier if candidate has 0
+  skillName   String
+  minLevel    Int
+  weight      Float
+  isMandatory Boolean @default(false)
 
-  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job         Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId])
 }
 
 // ============================================================
-// MATCH TABLE (Pre-calculated scores — prevents re-computation)
-// The "Intersection" table: Central to Phase 1 performance.
+// MATCH TABLE
 // ============================================================
 
 model Match {
-  id              String  @id @default(cuid())
+  id              String           @id @default(cuid())
   jobId           String
-  candidateId     String  // References CandidateProfile.id
-  score           Int     // 0-100 percentage match
-  breakdown       Json    // {"technical": 75, "softSkills": 80, "experience": 60}
-  isShortlisted   Boolean @default(false)
-  isMandatoryPass Boolean @default(true) // False if any mandatory skill is 0
+  candidateId     String
+  score           Int
+  breakdown       Json
+  isShortlisted   Boolean          @default(false)
+  isMandatoryPass Boolean          @default(true)
+  calculatedAt    DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  calculatedAt DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  candidate       CandidateProfile @relation(fields: [candidateId], references: [userId], onDelete: Cascade)
+  job             Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  job       Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@unique([jobId, candidateId]) // One score per job-candidate pair
-  @@index([jobId, score])        // Fast sorting by score for a given job
+  @@unique([jobId, candidateId])
+  @@index([jobId, score])
   @@index([score])
 }
 
 // ============================================================
-// APPLICATION (Candidate applies to a job)
+// APPLICATIONS
 // ============================================================
 
 model Application {
   id          String            @id @default(cuid())
   jobId       String
-  userId      String
   candidateId String
   status      ApplicationStatus @default(PENDING)
-  coverLetter String?           @db.Text
+  coverLetter String?
   appliedAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  job       Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate   CandidateProfile  @relation(fields: [candidateId], references: [userId], onDelete: Cascade)
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  @@unique([jobId, userId])
+  @@unique([jobId, candidateId])
   @@index([jobId])
-  @@index([userId])
+  @@index([candidateId])
 }

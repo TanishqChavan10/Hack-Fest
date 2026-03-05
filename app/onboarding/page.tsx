@@ -4,7 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Briefcase, User, Loader2 } from "lucide-react";
@@ -21,19 +27,25 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push("/login");
         return;
       }
-      
+
       // If user already has a role, redirect to dashboard
       const metadataRole = user.user_metadata?.role;
       if (metadataRole) {
-        router.push(metadataRole === "RECRUITER" ? "/recruiter/dashboard" : "/candidate/profile");
+        router.push(
+          metadataRole === "RECRUITER"
+            ? "/recruiter/dashboard"
+            : "/candidate/profile",
+        );
         return;
       }
-      
+
       setLoading(false);
     }
     checkAuth();
@@ -48,7 +60,10 @@ export default function OnboardingPage() {
       const res = await fetch("/api/auth/onboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, companyName: role === "RECRUITER" ? companyName : undefined }),
+        body: JSON.stringify({
+          role,
+          companyName: role === "RECRUITER" ? companyName : undefined,
+        }),
       });
 
       const data = await res.json();
@@ -60,11 +75,14 @@ export default function OnboardingPage() {
       // Refresh to update server-side session cookies, then redirect
       router.refresh();
       setTimeout(() => {
-        router.push(role === "RECRUITER" ? "/recruiter/dashboard" : "/candidate/profile");
+        router.push(
+          role === "RECRUITER" ? "/recruiter/dashboard" : "/candidate/profile",
+        );
       }, 500);
-      
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred. Check the console.");
+      setError(
+        err.message || "An unexpected error occurred. Check the console.",
+      );
       setSubmitting(false);
     }
   }
@@ -81,9 +99,12 @@ export default function OnboardingPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 to-background">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome to TalentMatch!</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Welcome to TalentMatch!
+          </CardTitle>
           <CardDescription>
-            You signed in with a new account. How do you want to use the platform?
+            Tell us how you want to use the platform so we can personalize your
+            experience.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -162,10 +183,15 @@ function RoleButton({
         "flex flex-col items-center gap-3 rounded-xl border-2 p-4 text-sm transition-all text-center",
         active
           ? "border-primary bg-primary/5 text-primary shadow-sm"
-          : "border-border hover:border-primary/50 hover:bg-muted"
+          : "border-border hover:border-primary/50 hover:bg-muted",
       )}
     >
-      <div className={cn("p-2 rounded-full", active ? "bg-primary/10" : "bg-muted")}>
+      <div
+        className={cn(
+          "p-2 rounded-full",
+          active ? "bg-primary/10" : "bg-muted",
+        )}
+      >
         {icon}
       </div>
       <div>
