@@ -59,13 +59,13 @@ export async function GET(request: Request) {
 
     // 4. Find candidates that need (re-)calculation
     const needsCalc = candidates.filter(
-      (c) => !cachedCandidateIds.has(c.id)
+      (c) => !cachedCandidateIds.has(c.userId)
     );
 
     // 5. Rank uncached candidates
     const ranked = rankCandidates(
       needsCalc.map((c) => ({
-        id: c.id,
+        id: c.userId,
         hardSkills: c.hardSkills,
         softSkills: c.softSkills,
         yearsOfExp: c.yearsOfExp,
@@ -124,15 +124,15 @@ export async function GET(request: Request) {
     // 8. Build final response, sorted by score
     const result = candidates
       .map((c) => {
-        const match = scoreMap.get(c.id);
+        const match = scoreMap.get(c.userId);
         return {
-          candidateId: c.id,
+          candidateId: c.userId,
           score: match?.score ?? 0,
           breakdown: match?.breakdown ?? {},
           isMandatoryPass: match?.isMandatoryPass ?? true,
           isShortlisted: match?.isShortlisted ?? false,
           candidate: {
-            id: c.id,
+            id: c.userId,
             headline: c.headline,
             location: c.location,
             experienceLevel: c.experienceLevel,
