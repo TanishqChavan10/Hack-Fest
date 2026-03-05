@@ -60,7 +60,7 @@ export async function GET(request: Request) {
 
         // 3. Hydrate full profiles from Prisma
         const whereClause = {
-          id: { in: candidateIds },
+          userId: { in: candidateIds },
           isOpenToWork: true,
           ...(level && { experienceLevel: level as never }),
         };
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         const sorted = candidates
           .map((c: any) => ({
             ...c,
-            semanticScore: Math.round((scoreMap.get(c.id) ?? 0) * 100),
+            semanticScore: Math.round((scoreMap.get(c.userId) ?? 0) * 100),
           }))
           .sort((a: { semanticScore: number }, b: { semanticScore: number }) => b.semanticScore - a.semanticScore);
 

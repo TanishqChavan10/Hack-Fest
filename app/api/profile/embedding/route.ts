@@ -55,7 +55,7 @@ export async function POST() {
         const embedding = await generateEmbedding(profileText);
 
         // Upsert into pgvector table
-        await upsertCandidateEmbedding(profile.id, embedding, {
+        await upsertCandidateEmbedding(profile.userId, embedding, {
             name: session.user.name ?? "",
             headline: profile.headline ?? "",
             skills: Object.keys(hardSkills),

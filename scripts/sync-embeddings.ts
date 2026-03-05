@@ -16,7 +16,7 @@ async function syncEmbeddings() {
         console.log(`📡 Found ${candidates.length} candidates to process.`);
 
         for (const candidate of candidates) {
-            console.log(`   ⚙️ Processing: ${candidate.id}...`);
+            console.log(`   ⚙️ Processing: ${candidate.userId}...`);
 
             const text = buildCandidateProfileText({
                 headline: candidate.headline,
@@ -30,8 +30,8 @@ async function syncEmbeddings() {
             const embedding = await generateEmbedding(text, "RETRIEVAL_DOCUMENT");
 
             console.log(`      Uploading to Supabase...`);
-            await upsertCandidateEmbedding(candidate.id, embedding, {
-                name: candidate.id,
+            await upsertCandidateEmbedding(candidate.userId, embedding, {
+                name: candidate.userId,
                 updatedAt: new Date().toISOString(),
             });
 
