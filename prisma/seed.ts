@@ -4,7 +4,6 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const PASS_HASH = await bcrypt.hash("Password123!", 12);
 
   // NOTE: With Supabase Auth, real users are created via supabase.auth.signUp().
   // These seed records are for development/testing only; they won't have
@@ -20,7 +19,7 @@ async function main() {
       email: "admin@talentmatch.com",
       name: "Platform Admin",
       role: "ADMIN",
-      hashedPassword: PASS_HASH,
+
     },
   });
 
@@ -54,10 +53,10 @@ async function main() {
     where: { email: "recruiter@startuphub.com" },
     update: {},
     create: {
-      email: "candidate@demo.com",
-      name: "Jane Developer",
-      role: "CANDIDATE",
-      candidateProfile: {
+      email: "recruiter@startuphub.com",
+      name: "Raj Patel",
+      role: "RECRUITER",
+      recruiterProfile: {
         create: {
           companyName: "StartupHub",
           industry: "FinTech",
@@ -80,7 +79,7 @@ async function main() {
       email: "recruiter@dataworks.com",
       name: "Meera Krishnan",
       role: "RECRUITER",
-      hashedPassword: PASS_HASH,
+
       recruiterProfile: {
         create: {
           companyName: "DataWorks AI",
@@ -233,7 +232,7 @@ async function main() {
         email: c.email,
         name: c.name,
         role: "CANDIDATE",
-        hashedPassword: PASS_HASH,
+
         candidateProfile: {
           create: {
             headline: c.headline,

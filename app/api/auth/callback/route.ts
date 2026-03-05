@@ -23,20 +23,26 @@ export async function GET(request: Request) {
         where: { id: data.user.id },
       });
 
+      const metadataRole = data.user.user_metadata?.role as string | undefined;
+
       if (!existingUser) {
-        const role = (data.user.user_metadata?.role as string) ?? "CANDIDATE";
+        if (!metadataRole) {
+          // Brand new OAuth user without a role -> Redirect to onboarding
+          return NextResponse.redirect(`${origin}/onboarding`);
+        }
+
+        // If they somehow already have a role (e.g. from email sign-up flag), create them here
         await db.user.create({
           data: {
             id: data.user.id,
             email: data.user.email,
             name: data.user.user_metadata?.full_name as string ?? data.user.user_metadata?.name as string ?? null,
             image: data.user.user_metadata?.avatar_url as string ?? null,
-            role: role === "RECRUITER" ? "RECRUITER" : "CANDIDATE",
+            role: metadataRole === "RECRUITER" ? "RECRUITER" : "CANDIDATE",
           },
         });
 
-        // Create default profile based on role
-        if (role === "RECRUITER") {
+        if (metadataRole === "RECRUITER") {
           await db.recruiterProfile.create({
             data: {
               userId: data.user.id,
@@ -52,6 +58,14 @@ export async function GET(request: Request) {
             },
           });
         }
+      }
+
+      // Ensure role is set in Supabase user_metadata for existing users
+      const currentRole = existingUser?.role || metadataRole;
+      if (currentRole && data.user.user_metadata?.role !== currentRole) {
+        await supabase.auth.updateUser({
+          data: { role: currentRole },
+        });
       }
 
       return NextResponse.redirect(`${origin}${next}`);

@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import { BrainCircuit, Briefcase, User } from "lucide-react";
+import { BrainCircuit, Briefcase, User, Github } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
@@ -149,6 +149,18 @@ function RegisterContent() {
     }
   }
 
+  async function handleGithubSignIn() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback`,
+      },
+    });
+    if (error) {
+      setServerError("Failed to initiate GitHub sign-in.");
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-primary/5 to-background py-12">
       <Card className="w-full max-w-md">
@@ -277,6 +289,16 @@ function RegisterContent() {
             >
               <GoogleIcon />
               Continue with Google
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGithubSignIn}
+            >
+              <Github className="h-5 w-5" />
+              Continue with GitHub
             </Button>
           </form>
         </CardContent>

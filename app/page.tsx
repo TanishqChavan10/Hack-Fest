@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -7,7 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { BrainCircuit, Search, TrendingUp, Users } from "lucide-react";
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
 
   if (session?.user) {
     const role = session.user.role;

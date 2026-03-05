@@ -5,7 +5,7 @@ import { db } from "@/lib/prisma";
 import {
     buildCandidateProfileText,
     generateEmbedding,
-} from "@/services/openai";
+} from "@/services/gemini";
 import { upsertCandidateEmbedding } from "@/lib/supabase";
 
 export async function POST() {

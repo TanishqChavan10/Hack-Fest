@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import { BrainCircuit } from "lucide-react";
+import { BrainCircuit, Github } from "lucide-react";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const LoginSchema = z.object({
@@ -73,9 +73,9 @@ function LoginContent() {
       return;
     }
 
-    // Success: Get session and redirect based on role
-    const session = await getSession();
-    const role = session?.user?.role;
+    // Success: Get user role and redirect
+    const { data: { user } } = await supabase.auth.getUser();
+    const role = user?.user_metadata?.role;
 
     if (callbackUrl) {
       router.push(callbackUrl);
@@ -103,11 +103,23 @@ function LoginContent() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(callbackUrl)}`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(callbackUrl ?? "")}`,
       },
     });
     if (error) {
       setError("Failed to initiate Google sign-in.");
+    }
+  }
+
+  async function handleGithubSignIn() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(callbackUrl ?? "")}`,
+      },
+    });
+    if (error) {
+      setError("Failed to initiate GitHub sign-in.");
     }
   }
 
@@ -181,6 +193,16 @@ function LoginContent() {
             >
               <GoogleIcon />
               Continue with Google
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGithubSignIn}
+            >
+              <Github className="h-5 w-5" />
+              Continue with GitHub
             </Button>
           </form>
         </CardContent>
