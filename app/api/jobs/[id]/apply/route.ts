@@ -33,7 +33,7 @@ export async function POST(
 
     // Check for duplicate application
     const existing = await db.application.findFirst({
-      where: { jobId: params.id, userId: session.user.id },
+      where: { jobId: params.id, candidateId: session.user.id },
     });
 
     if (existing) {
@@ -43,8 +43,7 @@ export async function POST(
     const application = await db.application.create({
       data: {
         jobId: params.id,
-        userId: session.user.id,
-        candidateId: candidateProfile.id,
+        candidateId: candidateProfile.userId,
         status: "PENDING",
       },
     });
