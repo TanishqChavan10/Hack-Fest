@@ -73,8 +73,8 @@ export async function GET(request: Request) {
       requirements,
       categoryWeights,
       job.experienceLevel === "ENTRY" ? 0 :
-      job.experienceLevel === "MID" ? 2 :
-      job.experienceLevel === "SENIOR" ? 5 : 10
+        job.experienceLevel === "MID" ? 2 :
+          job.experienceLevel === "SENIOR" ? 5 : 10
     );
 
     // 6. Upsert new scores into the Match cache table
@@ -141,6 +141,7 @@ export async function GET(request: Request) {
             githubUsername: c.githubUsername,
             user: c.user,
           },
+          jobRequirements: requirements,
         };
       })
       .sort((a, b) => {

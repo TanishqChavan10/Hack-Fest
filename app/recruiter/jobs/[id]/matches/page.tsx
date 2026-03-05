@@ -21,6 +21,12 @@ interface MatchResult {
   breakdown: MatchBreakdown;
   isMandatoryPass: boolean;
   isShortlisted: boolean;
+  jobRequirements: Array<{
+    skillName: string;
+    minLevel: number;
+    weight: number;
+    isMandatory: boolean;
+  }>;
   candidate: {
     id: string;
     headline: string | null;
@@ -140,6 +146,7 @@ export default function JobMatchesPage() {
               key={m.candidateId}
               {...m}
               jobId={jobId}
+              jobRequirements={m.jobRequirements}
               onShortlistToggle={(cId, val) => {
                 setMatches((prev) =>
                   prev.map((x) =>
