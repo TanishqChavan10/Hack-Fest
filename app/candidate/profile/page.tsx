@@ -24,8 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { SkillChart } from "@/components/charts/SkillChart";
-import { Tabs } from "@radix-ui/react-tabs";
-import { Plus, Trash2, CheckCircle2, Loader2, Github } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Loader2, Github, Star, GitFork, Users, Code2, Sparkles } from "lucide-react";
 
 const SkillSchema = z.object({
   name: z.string().min(1, "Skill name required"),
@@ -60,11 +59,27 @@ function mapToArray(
   return Object.entries(map).map(([name, level]) => ({ name, level }));
 }
 
+// GitHub stats shape
+interface GitHubStats {
+  publicRepos: number;
+  followers: number;
+  following: number;
+  totalStars: number;
+  topLanguages: Record<string, number>;
+  repos: { name: string; description: string | null; language: string | null; stars: number; url: string }[];
+}
+
 export default function CandidateProfilePage() {
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [githubStats, setGithubStats] = useState<GitHubStats | null>(null);
+  const [lastGithubSync, setLastGithubSync] = useState<string | null>(null);
+  const [embedding, setEmbedding] = useState(false);
+  const [embeddingMsg, setEmbeddingMsg] = useState<string | null>(null);
 
   const {
     register,
@@ -107,11 +122,40 @@ export default function CandidateProfilePage() {
         const soft = mapToArray(data.softSkills as Record<string, number>);
         if (hard.length > 0) setValue("hardSkills", hard);
         if (soft.length > 0) setValue("softSkills", soft);
+        // GitHub data
+        if (data.githubStats) setGithubStats(data.githubStats as GitHubStats);
+        if (data.lastGithubSync) setLastGithubSync(data.lastGithubSync);
       }
     } finally {
       setFetchLoading(false);
     }
   }, [setValue]);
+
+  // GitHub Sync handler
+  async function handleGithubSync() {
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch("/api/profile/github-sync", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        setSyncMessage(json.error ?? "Sync failed");
+        return;
+      }
+      setSyncMessage(json.message ?? "GitHub synced!");
+      // Refresh form with updated data
+      if (json.data) {
+        const hard = mapToArray(json.data.hardSkills as Record<string, number>);
+        if (hard.length > 0) setValue("hardSkills", hard);
+        if (json.data.githubStats) setGithubStats(json.data.githubStats as GitHubStats);
+        if (json.data.lastGithubSync) setLastGithubSync(json.data.lastGithubSync);
+      }
+    } catch {
+      setSyncMessage("Network error — try again");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   useEffect(() => {
     fetchProfile();
@@ -242,15 +286,107 @@ export default function CandidateProfilePage() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    title="Sync GitHub (Phase 2)"
+                    title="Sync GitHub"
+                    onClick={handleGithubSync}
+                    disabled={syncing || !watch("githubUsername")}
                   >
-                    <Github className="h-4 w-4" />
+                    {syncing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Github className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
+                {syncMessage && (
+                  <p className="text-xs text-muted-foreground">{syncMessage}</p>
+                )}
+                {lastGithubSync && (
+                  <p className="text-xs text-muted-foreground">
+                    Last synced: {new Date(lastGithubSync).toLocaleString()}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* GitHub Stats */}
+        {githubStats && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Github className="h-5 w-5" /> GitHub Stats
+              </CardTitle>
+              <CardDescription>
+                Auto-synced from your public GitHub profile
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <Code2 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-2xl font-bold">{githubStats.publicRepos}</p>
+                  <p className="text-xs text-muted-foreground">Repos</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <Star className="h-4 w-4 mx-auto mb-1 text-yellow-500" />
+                  <p className="text-2xl font-bold">{githubStats.totalStars}</p>
+                  <p className="text-xs text-muted-foreground">Stars</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-2xl font-bold">{githubStats.followers}</p>
+                  <p className="text-xs text-muted-foreground">Followers</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <GitFork className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-2xl font-bold">{githubStats.following}</p>
+                  <p className="text-xs text-muted-foreground">Following</p>
+                </div>
+              </div>
+              {githubStats.topLanguages && Object.keys(githubStats.topLanguages).length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Top Languages</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(githubStats.topLanguages)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 8)
+                      .map(([lang]) => (
+                        <Badge key={lang} variant="secondary">{lang}</Badge>
+                      ))}
+                  </div>
+                </div>
+              )}
+              {githubStats.repos && githubStats.repos.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium mb-2">Top Repositories</p>
+                  <div className="space-y-2">
+                    {githubStats.repos.map((repo) => (
+                      <a
+                        key={repo.name}
+                        href={repo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{repo.name}</span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {repo.language && <Badge variant="outline" className="text-xs">{repo.language}</Badge>}
+                            <span className="flex items-center gap-0.5"><Star className="h-3 w-3" />{repo.stars}</span>
+                          </div>
+                        </div>
+                        {repo.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{repo.description}</p>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Hard Skills */}
         <Card>
@@ -362,7 +498,7 @@ export default function CandidateProfilePage() {
         </Card>
 
         {/* Submit */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Button type="submit" size="lg" disabled={loading}>
             {loading ? (
               <>
@@ -372,10 +508,42 @@ export default function CandidateProfilePage() {
               "Save Profile"
             )}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            disabled={embedding}
+            onClick={async () => {
+              setEmbedding(true);
+              setEmbeddingMsg(null);
+              try {
+                const res = await fetch("/api/profile/embedding", { method: "POST" });
+                const json = await res.json();
+                setEmbeddingMsg(res.ok ? (json.message ?? "AI profile generated!") : (json.error ?? "Failed"));
+              } catch {
+                setEmbeddingMsg("Network error — try again");
+              } finally {
+                setEmbedding(false);
+              }
+            }}
+            className="gap-1.5"
+          >
+            {embedding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Generate AI Profile
+          </Button>
           {saved && (
             <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
               <CheckCircle2 className="h-4 w-4" />
               Profile saved!
+            </span>
+          )}
+          {embeddingMsg && (
+            <span className="text-sm text-muted-foreground">
+              {embeddingMsg}
             </span>
           )}
         </div>

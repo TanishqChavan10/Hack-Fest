@@ -1,29 +1,25 @@
 // ============================================================
 // /services/openai.ts
-// PHASE 2 — OpenAI Embedding Generator
+// Embedding Generator — powered by Google Gemini
 // Converts text (job descriptions / candidate profiles) into
-// 1536-dimensional vectors for pgvector semantic search.
+// 768-dimensional vectors for pgvector semantic search.
 // ============================================================
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-const EMBEDDING_MODEL = "text-embedding-3-small";
-const EMBEDDING_DIMENSIONS = 1536;
+const EMBEDDING_MODEL = "text-embedding-004";
+const EMBEDDING_DIMENSIONS = 768;
 
 // -------------------------------------------------------
 // Generate a single text embedding
 // -------------------------------------------------------
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await client.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: text.trim().replace(/\n/g, " "),
-    dimensions: EMBEDDING_DIMENSIONS,
-  });
+  const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
 
-  return response.data[0].embedding;
+  const result = await model.embedContent(text.trim().replace(/\n/g, " "));
+
+  return result.embedding.values;
 }
 
 // -------------------------------------------------------

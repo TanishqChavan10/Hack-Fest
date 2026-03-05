@@ -1,0 +1,218 @@
+# Work Division: 2 Developers, Zero Dependencies
+
+Split by **user-facing side** so there are zero shared files.
+
+---
+
+## 👤 Person A — Candidate-Side Features
+
+> Everything under `app/candidate/`, `app/api/profile/`, and `app/api/applications/`
+
+### Task A1: GitHub Sync API + Profile Button
+**Goal:** Candidate clicks "Sync GitHub" → skills auto-populate from repos
+
+#### [NEW] `app/api/profile/github-sync/route.ts`
+- `POST` handler: reads `githubUsername` from the candidate's profile
+- Calls `fetchGitHubProfile()` from `lib/github.ts`
+- Merges `derivedSkills` into `hardSkills` (keep manual entries, add/update GitHub ones)
+- Updates `githubStats` and `lastGithubSync` on the CandidateProfile
+- Auth check: must be CANDIDATE role
+
+#### [NEW] `app/api/profile/embedding/route.ts`
+- `POST` handler: generates an OpenAI embedding for the candidate's profile
+- Calls `buildCandidateProfileText()` → `generateEmbedding()` → `upsertCandidateEmbedding()`
+- Triggered after profile save or GitHub sync
+- Auth check: must be CANDIDATE role
+
+#### [MODIFY] `app/candidate/profile/page.tsx`
+- Add "Sync GitHub" button (visible when `githubUsername` is filled)
+- Show sync status / last sync timestamp
+- Add "Generate AI Profile" button (calls embedding endpoint)
+- Show GitHub stats section (repos, stars, languages) when data exists
+
+---
+
+### Task A2: Candidate Applications Page
+**Goal:** Candidate can see all jobs they applied to + application status
+
+#### [NEW] `app/api/applications/route.ts`
+- `GET` handler: returns all applications for the logged-in candidate
+- Includes job title, company name, status (PENDING/SHORTLISTED/REJECTED/HIRED), applied date
+- Auth check: must be CANDIDATE role
+
+#### [NEW] `app/candidate/applications/page.tsx`
+- Table/card list of all applied jobs with status badges
+- Filter by status (All / Pending / Shortlisted / Rejected)
+- Link to job detail page
+- Empty state: "No applications yet → Browse Jobs"
+
+---
+
+### Task A3: Skill Gap Analysis Page
+**Goal:** Candidate selects a job → sees which skills they're missing and what to improve
+
+#### [NEW] `app/api/gap-analysis/route.ts`
+- `GET ?jobId=xxx` handler: compares candidate's skills against job requirements
+- Returns per-skill: `{ skill, candidateLevel, requiredLevel, gap, suggestion }`
+- Auth check: must be CANDIDATE role
+
+#### [NEW] `app/candidate/gap-analysis/page.tsx`
+- Job selector dropdown (from published jobs)
+- Uses existing `SkillGapChart` component from `components/charts/SkillChart.tsx`
+- Shows skill-by-skill breakdown with actionable suggestions
+- "Your match score for this job: X%"
+
+---
+
+### Person A — File Map (No Overlap)
+
+| Action | File |
+|---|---|
+| **CREATE** | `app/api/profile/github-sync/route.ts` |
+| **CREATE** | `app/api/profile/embedding/route.ts` |
+| **MODIFY** | `app/candidate/profile/page.tsx` |
+| **CREATE** | `app/api/applications/route.ts` |
+| **CREATE** | `app/candidate/applications/page.tsx` |
+| **CREATE** | `app/api/gap-analysis/route.ts` |
+| **CREATE** | `app/candidate/gap-analysis/page.tsx` |
+
+**Imports from (READ-ONLY, don't modify):** `lib/github.ts`, `lib/matching.ts`, `services/openai.ts`, `lib/supabase.ts`, `lib/prisma.ts`, `components/charts/SkillChart.tsx`
+
+---
+
+## 👤 Person B — Recruiter-Side + Intelligence Features
+
+> Everything under `app/api/search/`, `components/matching/`, `app/admin/`, and `prisma/seed.ts`
+
+### Task B1: Wire Semantic Search
+**Goal:** Recruiter search bar uses pgvector + OpenAI when `mode=semantic`
+
+#### [MODIFY] `app/api/search/route.ts`
+- Add `mode` query param: `keyword` (default) or `semantic`
+- When `mode=semantic`:
+  - Call `generateEmbedding(query)` from `services/openai.ts`
+  - Call `semanticSearchCandidates(embedding, 50)` from `lib/supabase.ts`
+  - Fetch full candidate profiles from Prisma by IDs
+  - Return results with `searchMode: "semantic"`
+- Keep existing keyword search as fallback
+
+#### [MODIFY] `app/recruiter/search/page.tsx`
+- Add a toggle/switch: "Keyword" vs "AI Semantic" search mode
+- Pass `mode` param to the API
+- Show appropriate badge indicating search mode used
+
+---
+
+### Task B2: Explainable AI (XAI) Tooltips
+**Goal:** MatchCard shows human-readable explanations for why a candidate matched
+
+#### [MODIFY] `components/matching/MatchCard.tsx`
+- Add a new `generateExplanation()` utility function inside the file
+- Takes `breakdown`, `candidate.hardSkills`, `score` → returns text like:
+  - "Strong match: Python (9/10) exceeds requirement"
+  - "⚠️ Missing mandatory skill: Docker"
+  - "85% technical fit, 70% experience fit"
+- Display as tooltip or expandable section below the score breakdown
+
+#### [NEW] `components/matching/XAITooltip.tsx`
+- Reusable component: hover/click to see explanation text
+- Takes `breakdown` + `candidateSkills` + `jobRequirements` props
+- Renders a list of explanation reasons
+
+---
+
+### Task B3: Admin Dashboard
+**Goal:** Basic analytics page for platform overview
+
+#### [NEW] `app/admin/page.tsx`
+- Stats: total users, total candidates, total recruiters, total jobs, total matches
+- Top skills across platform (aggregated from candidate profiles)
+- Recent sign-ups table
+- Protected: admin role only
+
+#### [NEW] `app/api/admin/stats/route.ts`
+- `GET` handler: aggregates platform-wide stats from Prisma
+- Auth check: must be ADMIN role
+
+#### [MODIFY] `middleware.ts`
+- Add admin route protection: `/admin` requires ADMIN role
+
+---
+
+### Task B4: Seed Data for Demo
+**Goal:** Realistic demo data for presentation
+
+#### [MODIFY] `prisma/seed.ts`
+- Create 3 recruiters with company profiles
+- Create 10+ candidates with varied skills (1-10 levels), GitHub usernames, different experience levels
+- Create 5+ job postings with weighted requirements
+- Pre-calculate match scores for demo
+
+---
+
+### Person B — File Map (No Overlap)
+
+| Action | File |
+|---|---|
+| **MODIFY** | `app/api/search/route.ts` |
+| **MODIFY** | `app/recruiter/search/page.tsx` |
+| **MODIFY** | `components/matching/MatchCard.tsx` |
+| **CREATE** | `components/matching/XAITooltip.tsx` |
+| **CREATE** | `app/admin/page.tsx` |
+| **CREATE** | `app/api/admin/stats/route.ts` |
+| **MODIFY** | `middleware.ts` |
+| **MODIFY** | `prisma/seed.ts` |
+
+**Imports from (READ-ONLY, don't modify):** `services/openai.ts`, `lib/supabase.ts`, `lib/matching.ts`, `lib/prisma.ts`
+
+---
+
+## 🔒 Zero-Overlap Guarantee
+
+```
+Person A files          Person B files
+─────────────────       ─────────────────
+app/api/profile/*       app/api/search/*
+app/api/applications/*  app/api/admin/*
+app/api/gap-analysis/*  app/recruiter/search/*
+app/candidate/*         components/matching/*
+                        app/admin/*
+                        middleware.ts
+                        prisma/seed.ts
+```
+
+> [!IMPORTANT]
+> **Neither person modifies any shared lib file.** Both import from `lib/` and `services/` as read-only. Zero merge conflicts guaranteed.
+
+---
+
+## ✅ Shared Files (READ-ONLY for both)
+
+These files are **already complete** and neither person should modify them:
+
+- `lib/matching.ts` — scoring engine
+- `lib/github.ts` — GitHub scraper
+- `lib/supabase.ts` — pgvector operations
+- `lib/auth.ts` — NextAuth config
+- `lib/prisma.ts` — DB client
+- `services/openai.ts` — embedding generator
+- `components/ui/*` — all UI primitives
+- `prisma/schema.prisma` — database schema
+
+---
+
+## Verification Plan
+
+### Person A — Testing
+1. **GitHub Sync:** Register as candidate → set GitHub username → click "Sync GitHub" → verify `hardSkills` updated in profile
+2. **Applications Page:** Apply to 2-3 jobs → navigate to `/candidate/applications` → verify all applications shown with correct statuses
+3. **Skill Gap:** Select a job on gap analysis page → verify chart renders with skill comparisons
+
+### Person B — Testing
+1. **Semantic Search:** As recruiter → type "Cloud infrastructure expert" → toggle to Semantic mode → verify different results than keyword mode
+2. **XAI Tooltips:** View matches for a job → expand MatchCard → verify human-readable explanations appear
+3. **Admin Dashboard:** Login as admin → navigate to `/admin` → verify stats render
+4. **Seed Data:** Run `npm run db:seed` → verify demo data created without errors
+
+> [!TIP]
+> Both people can work on separate git branches and merge at the end — since files don't overlap, merges will be automatic.

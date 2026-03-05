@@ -24,7 +24,7 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
  * The `candidate_embeddings` table must be created with:
  *   CREATE TABLE candidate_embeddings (
  *     id TEXT PRIMARY KEY,
- *     embedding vector(1536),
+ *     embedding vector(768),
  *     metadata JSONB
  *   );
  */
@@ -74,7 +74,7 @@ export async function semanticSearchCandidates(
 // -- Candidate embeddings table
 // CREATE TABLE IF NOT EXISTS candidate_embeddings (
 //   id TEXT PRIMARY KEY,
-//   embedding extensions.vector(1536),
+//   embedding extensions.vector(768),
 //   metadata JSONB DEFAULT '{}'::jsonb,
 //   created_at TIMESTAMPTZ DEFAULT NOW()
 // );
