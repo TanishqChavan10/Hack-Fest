@@ -16,7 +16,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
       include: {
         requirements: true,
         recruiterProfile: {
-          select: { companyName: true, logoUrl: true, location: true, website: true },
+          select: {
+            companyName: true,
+            logoUrl: true,
+            location: true,
+            website: true,
+          },
+        },
+        _count: {
+          select: { applications: true },
         },
       },
     });
@@ -36,7 +44,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ data: job });
   } catch (error) {
     console.error("[JOB GET]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -62,7 +73,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ data: updated });
   } catch (error) {
     console.error("[JOB PATCH]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -86,6 +100,9 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ message: "Job archived successfully." });
   } catch (error) {
     console.error("[JOB DELETE]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

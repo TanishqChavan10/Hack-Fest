@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/components/shared/AuthProvider";
 import Link from "next/link";
 import {
@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/Progress";
 import { formatSalary, timeAgo, getScoreColor } from "@/lib/utils";
-import type { JobData } from "@/types";
 
 interface JobRequirement {
   id: string;
@@ -42,10 +41,12 @@ interface JobDetail {
   status: string;
   requirements: JobRequirement[];
   createdAt: string;
-  recruiter: {
-    company: string | null;
-    user: { name: string | null };
-  };
+  recruiterProfile?: {
+    companyName: string;
+    location: string | null;
+    logoUrl?: string | null;
+    website?: string | null;
+  } | null;
   _count: { applications: number };
 }
 
@@ -56,7 +57,6 @@ interface UserMatch {
 
 export default function JobDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { user, role } = useAuth();
   const [job, setJob] = useState<JobDetail | null>(null);
   const [match, setMatch] = useState<UserMatch | null>(null);
@@ -132,6 +132,9 @@ export default function JobDetailPage() {
   const softSkillReqs = job.requirements.filter(
     (r) => r.category === "soft_skill",
   );
+  const companyName =
+    job.recruiterProfile?.companyName || "Company not specified";
+  const applicantCount = job._count?.applications ?? 0;
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4 space-y-6">
@@ -148,9 +151,7 @@ export default function JobDetailPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">{job.title}</h1>
-            <p className="text-lg text-muted-foreground mt-1">
-              {job.recruiter.company || job.recruiter.user.name}
-            </p>
+            <p className="text-lg text-muted-foreground mt-1">{companyName}</p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Badge
@@ -188,7 +189,7 @@ export default function JobDetailPage() {
           </span>
           <span className="flex items-center gap-1">
             <Briefcase className="h-4 w-4" />
-            {job._count.applications} applicants
+            {applicantCount} applicants
           </span>
         </div>
 
