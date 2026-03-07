@@ -293,7 +293,7 @@ export default function EditJobPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="salaryMin">Salary Min ($)</Label>
+                <Label htmlFor="salaryMin">Salary Min (₹)</Label>
                 <Input
                   id="salaryMin"
                   type="number"
@@ -302,7 +302,7 @@ export default function EditJobPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="salaryMax">Salary Max ($)</Label>
+                <Label htmlFor="salaryMax">Salary Max (₹)</Label>
                 <Input
                   id="salaryMax"
                   type="number"

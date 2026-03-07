@@ -8,6 +8,7 @@ import {
   LogOut,
   LayoutDashboard,
   Search,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,11 @@ export function Navbar() {
                 href="/candidate/jobs"
                 icon={<Briefcase className="h-4 w-4" />}
                 label="Browse Jobs"
+              />
+              <NavLink
+                href="/candidate/applications"
+                icon={<FileText className="h-4 w-4" />}
+                label="My Applications"
               />
             </>
           )}

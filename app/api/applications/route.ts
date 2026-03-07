@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const statusFilter = searchParams.get("status"); // PENDING | SHORTLISTED | REJECTED | HIRED
 
     const where: Record<string, unknown> = {
-      userId: session.user.id,
+      candidateId: session.user.id,
     };
 
     if (

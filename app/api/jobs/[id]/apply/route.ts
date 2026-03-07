@@ -40,11 +40,20 @@ export async function POST(
       return NextResponse.json({ error: "Already applied to this job" }, { status: 409 });
     }
 
+    let coverLetter: string | undefined;
+    try {
+      const body = await request.json();
+      coverLetter = body?.coverLetter?.trim() || undefined;
+    } catch {
+      // body is optional
+    }
+
     const application = await db.application.create({
       data: {
         jobId: params.id,
         candidateId: candidateProfile.userId,
         status: "PENDING",
+        coverLetter: coverLetter ?? null,
       },
     });
 

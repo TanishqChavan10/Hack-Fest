@@ -22,12 +22,13 @@ import {
 import {
   MapPin,
   Building2,
-  DollarSign,
   Clock,
   Search,
   Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { formatSalary, timeAgo } from "@/lib/utils";
+import ApplyModal from "@/components/matching/ApplyModal";
 
 interface Job {
   id: string;
@@ -56,6 +57,12 @@ export default function CandidateJobsPage() {
   const [level, setLevel] = useState("all");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
+  const [applyModal, setApplyModal] = useState<{
+    jobId: string;
+    jobTitle: string;
+    companyName: string;
+  } | null>(null);
 
   async function fetchJobs(q = search, lvl = level, p = page) {
     setLoading(true);
@@ -72,8 +79,23 @@ export default function CandidateJobsPage() {
     }
   }
 
+  async function fetchAppliedJobs() {
+    try {
+      const res = await fetch("/api/applications");
+      const json = await res.json();
+      if (json.data) {
+        setAppliedJobIds(
+          new Set(json.data.map((a: { jobId: string }) => a.jobId)),
+        );
+      }
+    } catch {
+      // non-blocking
+    }
+  }
+
   useEffect(() => {
     fetchJobs();
+    fetchAppliedJobs();
   }, []);
 
   function handleSearch(e: React.FormEvent) {
@@ -137,12 +159,38 @@ export default function CandidateJobsPage() {
       ) : (
         <div className="space-y-4">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
+            <JobCard
+              key={job.id}
+              job={job}
+              alreadyApplied={appliedJobIds.has(job.id)}
+              onApply={() =>
+                setApplyModal({
+                  jobId: job.id,
+                  jobTitle: job.title,
+                  companyName:
+                    job.recruiterProfile?.companyName ?? "Unknown Company",
+                })
+              }
+            />
           ))}
         </div>
       )}
 
       {/* Pagination */}
+      {applyModal && (
+        <ApplyModal
+          jobId={applyModal.jobId}
+          jobTitle={applyModal.jobTitle}
+          companyName={applyModal.companyName}
+          open={true}
+          onClose={() => setApplyModal(null)}
+          onSuccess={(jobId) => {
+            setAppliedJobIds((prev) => new Set([...prev, jobId]));
+            setApplyModal(null);
+          }}
+        />
+      )}
+
       {total > 10 && (
         <div className="mt-8 flex justify-center gap-2">
           <Button
@@ -174,7 +222,15 @@ export default function CandidateJobsPage() {
   );
 }
 
-function JobCard({ job }: { job: Job }) {
+function JobCard({
+  job,
+  alreadyApplied,
+  onApply,
+}: {
+  job: Job;
+  alreadyApplied: boolean;
+  onApply: () => void;
+}) {
   const levelColors: Record<
     string,
     "info" | "success" | "warning" | "secondary"
@@ -216,7 +272,6 @@ function JobCard({ job }: { job: Job }) {
           )}
           {(job.salaryMin || job.salaryMax) && (
             <span className="flex items-center gap-1">
-              <DollarSign className="h-3 w-3" />
               {formatSalary(job.salaryMin, job.salaryMax)}
             </span>
           )}
@@ -243,10 +298,20 @@ function JobCard({ job }: { job: Job }) {
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-0">
-        <Button asChild size="sm" className="ml-auto">
+      <CardFooter className="pt-0 flex items-center justify-between">
+        <Button asChild size="sm" variant="ghost">
           <Link href={`/candidate/jobs/${job.id}`}>View Details</Link>
         </Button>
+        {alreadyApplied ? (
+          <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+            <CheckCircle className="h-4 w-4" />
+            Applied
+          </span>
+        ) : (
+          <Button size="sm" onClick={onApply}>
+            Apply Now
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

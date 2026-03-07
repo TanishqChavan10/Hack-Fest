@@ -229,7 +229,7 @@ export default function NewJobPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Salary Min (USD)</Label>
+                <Label>Salary Min (₹)</Label>
                 <Input
                   type="number"
                   placeholder="80000"
@@ -238,7 +238,7 @@ export default function NewJobPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Salary Max (USD)</Label>
+                <Label>Salary Max (₹)</Label>
                 <Input
                   type="number"
                   placeholder="120000"

@@ -12,10 +12,10 @@ export function formatPercent(value: number): string {
 }
 
 /** Format salary range */
-export function formatSalary(min?: number | null, max?: number | null, currency = "USD"): string {
+export function formatSalary(min?: number | null, max?: number | null, currency = "INR"): string {
   if (!min && !max) return "Not disclosed";
   const fmt = (n: number) =>
-    new Intl.NumberFormat("en-US", {
+    new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency,
       maximumFractionDigits: 0,

@@ -7,7 +7,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   MapPin,
-  DollarSign,
   Clock,
   Briefcase,
   CheckCircle,
@@ -18,6 +17,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/Progress";
 import { formatSalary, timeAgo, getScoreColor } from "@/lib/utils";
+import ApplyModal from "@/components/matching/ApplyModal";
 
 interface JobRequirement {
   id: string;
@@ -61,8 +61,8 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [match, setMatch] = useState<UserMatch | null>(null);
   const [loading, setLoading] = useState(true);
-  const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -78,27 +78,27 @@ export default function JobDetailPage() {
         setLoading(false);
       }
     };
-    if (params.id) fetchJob();
-  }, [params.id]);
 
-  const handleApply = async () => {
-    setApplying(true);
-    try {
-      const res = await fetch(`/api/jobs/${params.id}/apply`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        setApplied(true);
-      } else {
-        const data = await res.json();
-        setError(data.error || "Failed to apply.");
+    const checkApplied = async () => {
+      try {
+        const res = await fetch("/api/applications");
+        const json = await res.json();
+        if (json.data) {
+          const alreadyApplied = json.data.some(
+            (a: { jobId: string }) => a.jobId === params.id,
+          );
+          setApplied(alreadyApplied);
+        }
+      } catch {
+        // non-blocking
       }
-    } catch {
-      setError("Failed to submit application.");
-    } finally {
-      setApplying(false);
+    };
+
+    if (params.id) {
+      fetchJob();
+      if (role === "CANDIDATE") checkApplied();
     }
-  };
+  }, [params.id, role]);
 
   if (loading) {
     return (
@@ -179,7 +179,6 @@ export default function JobDetailPage() {
           )}
           {(job.salaryMin || job.salaryMax) && (
             <span className="flex items-center gap-1">
-              <DollarSign className="h-4 w-4" />
               {formatSalary(job.salaryMin ?? 0, job.salaryMax ?? 0)}
             </span>
           )}
@@ -212,18 +211,32 @@ export default function JobDetailPage() {
         {role === "CANDIDATE" && (
           <div className="flex gap-3">
             {applied ? (
-              <div className="flex items-center gap-2 text-success font-medium">
+              <div className="flex items-center gap-2 text-green-600 font-medium">
                 <CheckCircle className="h-5 w-5" />
                 Application submitted!
               </div>
             ) : (
-              <Button onClick={handleApply} disabled={applying} size="lg">
-                {applying ? "Submitting..." : "Apply Now"}
+              <Button onClick={() => setShowApplyModal(true)} size="lg">
+                Apply Now
               </Button>
             )}
           </div>
         )}
       </div>
+
+      {job && showApplyModal && (
+        <ApplyModal
+          jobId={job.id}
+          jobTitle={job.title}
+          companyName={job.recruiterProfile?.companyName ?? "Unknown Company"}
+          open={showApplyModal}
+          onClose={() => setShowApplyModal(false)}
+          onSuccess={() => {
+            setApplied(true);
+            setShowApplyModal(false);
+          }}
+        />
+      )}
 
       {/* Description */}
       <Card>

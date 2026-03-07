@@ -22,7 +22,6 @@ import {
 import {
   MapPin,
   Building2,
-  DollarSign,
   Clock,
   Loader2,
   Briefcase,
@@ -123,9 +122,21 @@ export default function CandidateApplicationsPage() {
       {!loading && applications.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <StatCard label="Total" value={applications.length} />
-          <StatCard label="Pending" value={counts.PENDING ?? 0} color="text-yellow-600" />
-          <StatCard label="Shortlisted" value={counts.SHORTLISTED ?? 0} color="text-blue-600" />
-          <StatCard label="Hired" value={counts.HIRED ?? 0} color="text-green-600" />
+          <StatCard
+            label="Pending"
+            value={counts.PENDING ?? 0}
+            color="text-yellow-600"
+          />
+          <StatCard
+            label="Shortlisted"
+            value={counts.SHORTLISTED ?? 0}
+            color="text-blue-600"
+          />
+          <StatCard
+            label="Hired"
+            value={counts.HIRED ?? 0}
+            color="text-green-600"
+          />
         </div>
       )}
 
@@ -202,7 +213,6 @@ function ApplicationCard({ application }: { application: ApplicationItem }) {
           )}
           {(job.salaryMin || job.salaryMax) && (
             <span className="flex items-center gap-1">
-              <DollarSign className="h-3 w-3" />
               {formatSalary(job.salaryMin, job.salaryMax)}
             </span>
           )}
