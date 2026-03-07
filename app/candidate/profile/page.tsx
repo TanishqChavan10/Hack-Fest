@@ -24,7 +24,26 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { SkillChart } from "@/components/charts/SkillChart";
-import { Plus, Trash2, CheckCircle2, Loader2, Github, Star, GitFork, Users, Code2, Sparkles } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Loader2,
+  Github,
+  Star,
+  GitFork,
+  Users,
+  Code2,
+  Sparkles,
+  FileUp,
+  Upload,
+  GraduationCap,
+  Briefcase,
+  FolderGit2,
+  Award,
+  Globe,
+} from "lucide-react";
+import { useRef } from "react";
 
 const SkillSchema = z.object({
   name: z.string().min(1, "Skill name required"),
@@ -32,6 +51,51 @@ const SkillSchema = z.object({
     (v) => Number(v),
     z.number().int().min(1).max(10),
   ) as z.ZodType<number>,
+});
+
+const EducationSchema = z.object({
+  degree: z.string().min(1, "Degree required"),
+  institution: z.string().min(1, "Institution required"),
+  fieldOfStudy: z.string().optional().default(""),
+  startYear: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+    z.number().int().nullable(),
+  ),
+  endYear: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+    z.number().int().nullable(),
+  ),
+  grade: z.string().optional().nullable(),
+});
+
+const ExperienceSchema = z.object({
+  title: z.string().min(1, "Job title required"),
+  company: z.string().min(1, "Company required"),
+  location: z.string().optional().nullable(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
+  current: z.boolean().optional().default(false),
+  description: z.string().optional().default(""),
+});
+
+const ProjectSchema = z.object({
+  name: z.string().min(1, "Project name required"),
+  description: z.string().optional().default(""),
+  techStack: z.string().optional().default(""),
+  url: z.string().optional().nullable(),
+  repoUrl: z.string().optional().nullable(),
+});
+
+const CertificationSchema = z.object({
+  name: z.string().min(1, "Certification name required"),
+  issuer: z.string().optional().default(""),
+  date: z.string().optional().nullable(),
+  url: z.string().optional().nullable(),
+});
+
+const LanguageSchema = z.object({
+  language: z.string().min(1, "Language required"),
+  proficiency: z.string().optional().default("Intermediate"),
 });
 
 const ProfileSchema = z.object({
@@ -48,6 +112,11 @@ const ProfileSchema = z.object({
   isOpenToWork: z.boolean().optional(),
   hardSkills: z.array(SkillSchema),
   softSkills: z.array(SkillSchema),
+  education: z.array(EducationSchema),
+  experience: z.array(ExperienceSchema),
+  projects: z.array(ProjectSchema),
+  certifications: z.array(CertificationSchema),
+  languages: z.array(LanguageSchema),
 });
 
 type ProfileForm = z.infer<typeof ProfileSchema>;
@@ -66,7 +135,13 @@ interface GitHubStats {
   following: number;
   totalStars: number;
   topLanguages: Record<string, number>;
-  repos: { name: string; description: string | null; language: string | null; stars: number; url: string }[];
+  repos: {
+    name: string;
+    description: string | null;
+    language: string | null;
+    stars: number;
+    url: string;
+  }[];
 }
 
 export default function CandidateProfilePage() {
@@ -80,6 +155,9 @@ export default function CandidateProfilePage() {
   const [lastGithubSync, setLastGithubSync] = useState<string | null>(null);
   const [embedding, setEmbedding] = useState(false);
   const [embeddingMsg, setEmbeddingMsg] = useState<string | null>(null);
+  const [resumeParsing, setResumeParsing] = useState(false);
+  const [resumeMsg, setResumeMsg] = useState<string | null>(null);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -96,11 +174,24 @@ export default function CandidateProfilePage() {
       experienceLevel: "ENTRY",
       hardSkills: [{ name: "", level: 5 }],
       softSkills: [{ name: "", level: 5 }],
+      education: [],
+      experience: [],
+      projects: [],
+      certifications: [],
+      languages: [],
     },
   });
 
   const hardSkillsArray = useFieldArray({ control, name: "hardSkills" });
   const softSkillsArray = useFieldArray({ control, name: "softSkills" });
+  const educationArray = useFieldArray({ control, name: "education" });
+  const experienceArray = useFieldArray({ control, name: "experience" });
+  const projectsArray = useFieldArray({ control, name: "projects" });
+  const certificationsArray = useFieldArray({
+    control,
+    name: "certifications",
+  });
+  const languagesArray = useFieldArray({ control, name: "languages" });
   const watchedHardSkills = watch("hardSkills");
 
   // Fetch existing profile on mount
@@ -122,6 +213,28 @@ export default function CandidateProfilePage() {
         const soft = mapToArray(data.softSkills as Record<string, number>);
         if (hard.length > 0) setValue("hardSkills", hard);
         if (soft.length > 0) setValue("softSkills", soft);
+        // New sections
+        if (Array.isArray(data.education) && data.education.length > 0)
+          setValue("education", data.education);
+        if (Array.isArray(data.experience) && data.experience.length > 0)
+          setValue("experience", data.experience);
+        if (Array.isArray(data.projects) && data.projects.length > 0)
+          setValue(
+            "projects",
+            data.projects.map((p: { techStack?: string[] }) => ({
+              ...p,
+              techStack: Array.isArray(p.techStack)
+                ? p.techStack.join(", ")
+                : "",
+            })),
+          );
+        if (
+          Array.isArray(data.certifications) &&
+          data.certifications.length > 0
+        )
+          setValue("certifications", data.certifications);
+        if (Array.isArray(data.languages) && data.languages.length > 0)
+          setValue("languages", data.languages);
         // GitHub data
         if (data.githubStats) setGithubStats(data.githubStats as GitHubStats);
         if (data.lastGithubSync) setLastGithubSync(data.lastGithubSync);
@@ -147,8 +260,10 @@ export default function CandidateProfilePage() {
       if (json.data) {
         const hard = mapToArray(json.data.hardSkills as Record<string, number>);
         if (hard.length > 0) setValue("hardSkills", hard);
-        if (json.data.githubStats) setGithubStats(json.data.githubStats as GitHubStats);
-        if (json.data.lastGithubSync) setLastGithubSync(json.data.lastGithubSync);
+        if (json.data.githubStats)
+          setGithubStats(json.data.githubStats as GitHubStats);
+        if (json.data.lastGithubSync)
+          setLastGithubSync(json.data.lastGithubSync);
       }
     } catch {
       setSyncMessage("Network error — try again");
@@ -161,14 +276,91 @@ export default function CandidateProfilePage() {
     fetchProfile();
   }, [fetchProfile]);
 
+  // Resume upload & parse handler
+  async function handleResumeParse(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setResumeParsing(true);
+    setResumeMsg(null);
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      const res = await fetch("/api/profile/resume-parse", {
+        method: "POST",
+        body: formData,
+      });
+      const text = await res.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        console.error("Non-JSON response:", text.substring(0, 500));
+        setResumeMsg("Server error — please try again");
+        return;
+      }
+      if (!res.ok) {
+        setResumeMsg(json.error ?? "Failed to parse resume");
+        return;
+      }
+      // Auto-fill form fields from parsed resume
+      const d = json.data;
+      if (d.headline) setValue("headline", d.headline);
+      if (d.bio) setValue("bio", d.bio);
+      if (d.location) setValue("location", d.location);
+      if (d.yearsOfExp != null) setValue("yearsOfExp", d.yearsOfExp);
+      if (d.experienceLevel) setValue("experienceLevel", d.experienceLevel);
+      if (d.githubUsername) setValue("githubUsername", d.githubUsername);
+      if (d.portfolioUrl) setValue("portfolioUrl", d.portfolioUrl);
+      if (d.hardSkills?.length > 0) setValue("hardSkills", d.hardSkills);
+      if (d.softSkills?.length > 0) setValue("softSkills", d.softSkills);
+      if (d.education?.length > 0) setValue("education", d.education);
+      if (d.experience?.length > 0) setValue("experience", d.experience);
+      if (d.projects?.length > 0)
+        setValue(
+          "projects",
+          d.projects.map((p: { techStack?: string[] }) => ({
+            ...p,
+            techStack: Array.isArray(p.techStack) ? p.techStack.join(", ") : "",
+          })),
+        );
+      if (d.certifications?.length > 0)
+        setValue("certifications", d.certifications);
+      if (d.languages?.length > 0) setValue("languages", d.languages);
+      setResumeMsg(json.message ?? "Resume parsed successfully!");
+    } catch (err) {
+      console.error("Resume parse error:", err);
+      setResumeMsg(
+        err instanceof Error ? err.message : "Network error — try again",
+      );
+    } finally {
+      setResumeParsing(false);
+      // Reset file input so the same file can be re-uploaded
+      if (resumeInputRef.current) resumeInputRef.current.value = "";
+    }
+  }
+
   async function onSubmit(data: ProfileForm) {
     setLoading(true);
     setSaved(false);
     try {
+      // Convert techStack from comma-separated string to array for API
+      const payload = {
+        ...data,
+        projects: data.projects.map((p) => ({
+          ...p,
+          techStack:
+            typeof p.techStack === "string"
+              ? p.techStack
+                  .split(",")
+                  .map((t: string) => t.trim())
+                  .filter(Boolean)
+              : [],
+        })),
+      };
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (res.ok) setSaved(true);
     } finally {
@@ -199,7 +391,65 @@ export default function CandidateProfilePage() {
           Keep your skills updated to get better job matches.
         </p>
       </div>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {/* Resume Import Card */}
+      <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileUp className="h-5 w-5" /> Quick Fill with Resume
+          </CardTitle>
+          <CardDescription>
+            Upload your resume (PDF or TXT) and we&apos;ll auto-fill your
+            profile using AI.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <input
+              ref={resumeInputRef}
+              type="file"
+              accept=".pdf,.txt,.md,application/pdf,text/plain"
+              onChange={handleResumeParse}
+              className="hidden"
+              id="resume-upload"
+              disabled={resumeParsing}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => resumeInputRef.current?.click()}
+              disabled={resumeParsing}
+              className="gap-2"
+            >
+              {resumeParsing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Parsing Resume...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" /> Upload Resume
+                </>
+              )}
+            </Button>
+            {resumeMsg && (
+              <p
+                className={`text-sm ${
+                  resumeMsg.includes("skill") || resumeMsg.includes("success")
+                    ? "text-green-600"
+                    : "text-destructive"
+                }`}
+              >
+                {resumeMsg}
+              </p>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Supports PDF and text files up to 5 MB. Your data is parsed with AI
+            and never stored as raw text.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
         {/* Basic Info */}
         <Card>
@@ -325,7 +575,9 @@ export default function CandidateProfilePage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="text-center p-3 rounded-lg bg-muted/50">
                   <Code2 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                  <p className="text-2xl font-bold">{githubStats.publicRepos}</p>
+                  <p className="text-2xl font-bold">
+                    {githubStats.publicRepos}
+                  </p>
                   <p className="text-xs text-muted-foreground">Repos</p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/50">
@@ -344,19 +596,22 @@ export default function CandidateProfilePage() {
                   <p className="text-xs text-muted-foreground">Following</p>
                 </div>
               </div>
-              {githubStats.topLanguages && Object.keys(githubStats.topLanguages).length > 0 && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Top Languages</p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(githubStats.topLanguages)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 8)
-                      .map(([lang]) => (
-                        <Badge key={lang} variant="secondary">{lang}</Badge>
-                      ))}
+              {githubStats.topLanguages &&
+                Object.keys(githubStats.topLanguages).length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Top Languages</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(githubStats.topLanguages)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 8)
+                        .map(([lang]) => (
+                          <Badge key={lang} variant="secondary">
+                            {lang}
+                          </Badge>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               {githubStats.repos && githubStats.repos.length > 0 && (
                 <div className="mt-4">
                   <p className="text-sm font-medium mb-2">Top Repositories</p>
@@ -370,14 +625,25 @@ export default function CandidateProfilePage() {
                         className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm">{repo.name}</span>
+                          <span className="font-medium text-sm">
+                            {repo.name}
+                          </span>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {repo.language && <Badge variant="outline" className="text-xs">{repo.language}</Badge>}
-                            <span className="flex items-center gap-0.5"><Star className="h-3 w-3" />{repo.stars}</span>
+                            {repo.language && (
+                              <Badge variant="outline" className="text-xs">
+                                {repo.language}
+                              </Badge>
+                            )}
+                            <span className="flex items-center gap-0.5">
+                              <Star className="h-3 w-3" />
+                              {repo.stars}
+                            </span>
                           </div>
                         </div>
                         {repo.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{repo.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            {repo.description}
+                          </p>
                         )}
                       </a>
                     ))}
@@ -497,6 +763,422 @@ export default function CandidateProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Education */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" /> Education
+            </CardTitle>
+            <CardDescription>
+              Degrees, diplomas, and academic qualifications
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {educationArray.fields.map((field, i) => (
+              <div
+                key={field.id}
+                className="border rounded-lg p-4 space-y-3 relative"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => educationArray.remove(i)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>Degree</Label>
+                    <Input
+                      placeholder="B.Tech / M.S. / B.Sc."
+                      {...register(`education.${i}.degree`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Institution</Label>
+                    <Input
+                      placeholder="University name"
+                      {...register(`education.${i}.institution`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Field of Study</Label>
+                    <Input
+                      placeholder="Computer Science"
+                      {...register(`education.${i}.fieldOfStudy`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Grade / CGPA</Label>
+                    <Input
+                      placeholder="8.5 CGPA / 3.8 GPA"
+                      {...register(`education.${i}.grade`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Start Year</Label>
+                    <Input
+                      type="number"
+                      placeholder="2020"
+                      {...register(`education.${i}.startYear`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>End Year</Label>
+                    <Input
+                      type="number"
+                      placeholder="2024"
+                      {...register(`education.${i}.endYear`)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                educationArray.append({
+                  degree: "",
+                  institution: "",
+                  fieldOfStudy: "",
+                  startYear: null,
+                  endYear: null,
+                  grade: null,
+                })
+              }
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> Add Education
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Work Experience */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" /> Work Experience
+            </CardTitle>
+            <CardDescription>
+              Professional roles and internships
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {experienceArray.fields.map((field, i) => (
+              <div
+                key={field.id}
+                className="border rounded-lg p-4 space-y-3 relative"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => experienceArray.remove(i)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>Job Title</Label>
+                    <Input
+                      placeholder="Software Engineer"
+                      {...register(`experience.${i}.title`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Company</Label>
+                    <Input
+                      placeholder="Company name"
+                      {...register(`experience.${i}.company`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Location</Label>
+                    <Input
+                      placeholder="City, Country"
+                      {...register(`experience.${i}.location`)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 pt-6">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        {...register(`experience.${i}.current`)}
+                        className="rounded"
+                      />
+                      Currently working here
+                    </label>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Start Date</Label>
+                    <Input
+                      placeholder="Jan 2023"
+                      {...register(`experience.${i}.startDate`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>End Date</Label>
+                    <Input
+                      placeholder="Present"
+                      {...register(`experience.${i}.endDate`)}
+                    />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      rows={3}
+                      placeholder="Key responsibilities and achievements..."
+                      {...register(`experience.${i}.description`)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                experienceArray.append({
+                  title: "",
+                  company: "",
+                  location: null,
+                  startDate: null,
+                  endDate: null,
+                  current: false,
+                  description: "",
+                })
+              }
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> Add Experience
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Projects */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderGit2 className="h-5 w-5" /> Projects
+            </CardTitle>
+            <CardDescription>Notable projects and side work</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {projectsArray.fields.map((field, i) => (
+              <div
+                key={field.id}
+                className="border rounded-lg p-4 space-y-3 relative"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => projectsArray.remove(i)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>Project Name</Label>
+                    <Input
+                      placeholder="My Awesome Project"
+                      {...register(`projects.${i}.name`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Tech Stack</Label>
+                    <Input
+                      placeholder="React, Node.js, PostgreSQL"
+                      {...register(`projects.${i}.techStack`)}
+                    />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      rows={2}
+                      placeholder="What does this project do?"
+                      {...register(`projects.${i}.description`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Live URL</Label>
+                    <Input
+                      placeholder="https://myproject.com"
+                      {...register(`projects.${i}.url`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Repository URL</Label>
+                    <Input
+                      placeholder="https://github.com/user/repo"
+                      {...register(`projects.${i}.repoUrl`)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                projectsArray.append({
+                  name: "",
+                  description: "",
+                  techStack: "",
+                  url: null,
+                  repoUrl: null,
+                })
+              }
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> Add Project
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Certifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5" /> Certifications
+            </CardTitle>
+            <CardDescription>
+              Professional certifications, courses, and awards
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {certificationsArray.fields.map((field, i) => (
+              <div
+                key={field.id}
+                className="flex flex-col sm:flex-row gap-3 items-start border rounded-lg p-4 relative"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => certificationsArray.remove(i)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 w-full">
+                  <div className="space-y-1">
+                    <Label>Certification Name</Label>
+                    <Input
+                      placeholder="AWS Certified Developer"
+                      {...register(`certifications.${i}.name`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Issuer</Label>
+                    <Input
+                      placeholder="Amazon / Coursera / Google"
+                      {...register(`certifications.${i}.issuer`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Date</Label>
+                    <Input
+                      placeholder="2024"
+                      {...register(`certifications.${i}.date`)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Credential URL</Label>
+                    <Input
+                      placeholder="https://..."
+                      {...register(`certifications.${i}.url`)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                certificationsArray.append({
+                  name: "",
+                  issuer: "",
+                  date: null,
+                  url: null,
+                })
+              }
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> Add Certification
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Languages */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" /> Languages
+            </CardTitle>
+            <CardDescription>Languages you speak or write</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {languagesArray.fields.map((field, i) => (
+              <div key={field.id} className="flex gap-3 items-center">
+                <Input
+                  placeholder="e.g. English, Hindi, Spanish"
+                  className="flex-1"
+                  {...register(`languages.${i}.language`)}
+                />
+                <Select
+                  defaultValue="Intermediate"
+                  onValueChange={(v) =>
+                    setValue(`languages.${i}.proficiency`, v)
+                  }
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Native">Native</SelectItem>
+                    <SelectItem value="Fluent">Fluent</SelectItem>
+                    <SelectItem value="Intermediate">Intermediate</SelectItem>
+                    <SelectItem value="Basic">Basic</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => languagesArray.remove(i)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                languagesArray.append({
+                  language: "",
+                  proficiency: "Intermediate",
+                })
+              }
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> Add Language
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Submit */}
         <div className="flex flex-wrap items-center gap-4">
           <Button type="submit" size="lg" disabled={loading}>
@@ -517,9 +1199,15 @@ export default function CandidateProfilePage() {
               setEmbedding(true);
               setEmbeddingMsg(null);
               try {
-                const res = await fetch("/api/profile/embedding", { method: "POST" });
+                const res = await fetch("/api/profile/embedding", {
+                  method: "POST",
+                });
                 const json = await res.json();
-                setEmbeddingMsg(res.ok ? (json.message ?? "AI profile generated!") : (json.error ?? "Failed"));
+                setEmbeddingMsg(
+                  res.ok
+                    ? (json.message ?? "AI profile generated!")
+                    : (json.error ?? "Failed"),
+                );
               } catch {
                 setEmbeddingMsg("Network error — try again");
               } finally {

@@ -32,6 +32,45 @@ const SkillEntrySchema = z.object({
   level: z.number().int().min(1).max(10),
 });
 
+const EducationSchema = z.object({
+  degree: z.string().max(100),
+  institution: z.string().max(200),
+  fieldOfStudy: z.string().max(100).optional().default(""),
+  startYear: z.number().int().nullable().optional(),
+  endYear: z.number().int().nullable().optional(),
+  grade: z.string().max(50).nullable().optional(),
+});
+
+const ExperienceSchema = z.object({
+  title: z.string().max(100),
+  company: z.string().max(200),
+  location: z.string().max(100).nullable().optional(),
+  startDate: z.string().max(30).nullable().optional(),
+  endDate: z.string().max(30).nullable().optional(),
+  current: z.boolean().optional().default(false),
+  description: z.string().max(2000).optional().default(""),
+});
+
+const ProjectSchema = z.object({
+  name: z.string().max(100),
+  description: z.string().max(1000).optional().default(""),
+  techStack: z.array(z.string().max(50)).max(10).optional().default([]),
+  url: z.string().max(500).nullable().optional(),
+  repoUrl: z.string().max(500).nullable().optional(),
+});
+
+const CertificationSchema = z.object({
+  name: z.string().max(200),
+  issuer: z.string().max(200).optional().default(""),
+  date: z.string().max(30).nullable().optional(),
+  url: z.string().max(500).nullable().optional(),
+});
+
+const LanguageSchema = z.object({
+  language: z.string().max(50),
+  proficiency: z.string().max(30).optional().default("Intermediate"),
+});
+
 const ProfileUpdateSchema = z.object({
   headline: z.string().max(200).optional(),
   bio: z.string().max(2000).optional(),
@@ -47,6 +86,11 @@ const ProfileUpdateSchema = z.object({
   isOpenToWork: z.boolean().optional(),
   hardSkills: z.array(SkillEntrySchema).optional(),
   softSkills: z.array(SkillEntrySchema).optional(),
+  education: z.array(EducationSchema).optional(),
+  experience: z.array(ExperienceSchema).optional(),
+  projects: z.array(ProjectSchema).optional(),
+  certifications: z.array(CertificationSchema).optional(),
+  languages: z.array(LanguageSchema).optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -65,7 +109,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { hardSkills, softSkills, ...rest } = parsed.data;
+    const { hardSkills, softSkills, education, experience, projects, certifications, languages, ...rest } = parsed.data;
 
     // Convert skill arrays to SkillMap objects: [{name: "React", level: 8}] → {"react": 8}
     const hardSkillMap = hardSkills
@@ -86,6 +130,11 @@ export async function PATCH(request: Request) {
         ...rest,
         ...(hardSkillMap !== undefined && { hardSkills: hardSkillMap }),
         ...(softSkillMap !== undefined && { softSkills: softSkillMap }),
+        ...(education !== undefined && { education }),
+        ...(experience !== undefined && { experience }),
+        ...(projects !== undefined && { projects }),
+        ...(certifications !== undefined && { certifications }),
+        ...(languages !== undefined && { languages }),
       },
     });
 

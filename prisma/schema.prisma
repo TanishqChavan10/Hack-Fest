@@ -87,6 +87,13 @@ model CandidateProfile {
   hardSkills      Json            @default("{}")
   softSkills      Json            @default("{}")
 
+  // Resume-standard structured sections (stored as JSON arrays)
+  education       Json?           // [{degree, institution, fieldOfStudy, startYear, endYear, grade}]
+  experience      Json?           // [{title, company, location, startDate, endDate, current, description}]
+  projects        Json?           // [{name, description, techStack, url, repoUrl}]
+  certifications  Json?           // [{name, issuer, date, url}]
+  languages       Json?           // [{language, proficiency}]
+
   githubStats     Json?
   lastGithubSync  DateTime?
 
