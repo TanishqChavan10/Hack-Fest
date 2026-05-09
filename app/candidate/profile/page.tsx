@@ -248,8 +248,13 @@ export default function CandidateProfilePage() {
   async function handleGithubSync() {
     setSyncing(true);
     setSyncMessage(null);
+    const githubUsername = watch("githubUsername");
     try {
-      const res = await fetch("/api/profile/github-sync", { method: "POST" });
+      const res = await fetch("/api/profile/github-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ githubUsername }),
+      });
       const json = await res.json();
       if (!res.ok) {
         setSyncMessage(json.error ?? "Sync failed");

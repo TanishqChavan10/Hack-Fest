@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { fetchGitHubProfile } from "@/lib/github";
 
-export async function POST() {
+export async function POST(request: Request) {
     try {
         const session = await getSession();
         if (!session?.user) {
@@ -29,7 +29,15 @@ export async function POST() {
             );
         }
 
-        const githubUsername = profile.githubUsername;
+        // Use username from request body if provided, otherwise fall back to DB value
+        let githubUsername: string | null | undefined;
+        try {
+            const body = await request.json();
+            githubUsername = body?.githubUsername?.trim() || profile.githubUsername;
+        } catch {
+            githubUsername = profile.githubUsername;
+        }
+
         if (!githubUsername) {
             return NextResponse.json(
                 { error: "Set your GitHub username in your profile first" },

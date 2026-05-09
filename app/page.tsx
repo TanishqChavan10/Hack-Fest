@@ -28,9 +28,6 @@ export default async function HomePage() {
       {/* ── HERO ── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-background py-24 px-4">
         <div className="container mx-auto max-w-4xl text-center">
-          <Badge variant="secondary" className="mb-4 text-sm font-medium">
-            LinkedIn meets Tinder
-          </Badge>
           <h1 className="text-5xl font-extrabold tracking-tight sm:text-6xl">
             Discover Talent
             <span className="text-primary"> Intelligently</span>
